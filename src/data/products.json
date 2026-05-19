@@ -1,0 +1,92 @@
+[
+  {
+    "id": "prod_001",
+    "name": "Carrinho Picking CP-01",
+    "code": "CP-001",
+    "group": "Carrinhos",
+    "line": "Linha Leve",
+    "image": "https://img.usecurling.com/p/600/400?q=industrial%20cart&color=red",
+    "specs": {
+      "Material": "Lean Pipe",
+      "Dimensões": "1500x600x1800mm",
+      "Capacidade": "150kg",
+      "Acabamento": "Revestido"
+    },
+    "complementary": "Este equipamento é ideal para o transporte de caixas padrão no setor de picking."
+  },
+  {
+    "id": "prod_002",
+    "name": "Carrinho Robusto CP-02",
+    "code": "CP-002",
+    "group": "Carrinhos",
+    "line": "Linha Média",
+    "image": "https://img.usecurling.com/p/600/400?q=trolley&color=yellow",
+    "specs": {
+      "Material": "Híbrido",
+      "Dimensões": "1500x600x1800mm",
+      "Capacidade": "300kg",
+      "Acabamento": "Inox Escovado"
+    },
+    "complementary": "Estrutura reforçada para operações logísticas intensas."
+  },
+  {
+    "id": "prod_003",
+    "name": "Carrinho Carga CP-03",
+    "code": "CP-003",
+    "group": "Carrinhos",
+    "line": "Linha Pesada",
+    "image": "https://img.usecurling.com/p/600/400?q=heavy%20cart&color=green",
+    "specs": {
+      "Material": "Tubular Soldado",
+      "Dimensões": "1800x800x2000mm",
+      "Capacidade": "600kg",
+      "Acabamento": "Pintura Epóxi"
+    },
+    "complementary": "Alta durabilidade para peças pesadas e componentes automotivos."
+  },
+  {
+    "id": "prod_004",
+    "name": "Bancada Montagem BM-01",
+    "code": "BM-001",
+    "group": "Bancadas",
+    "line": "Linha Leve",
+    "image": "https://img.usecurling.com/p/600/400?q=workbench&color=blue",
+    "specs": {
+      "Material": "Lean Pipe",
+      "Dimensões": "2000x800x900mm",
+      "Capacidade": "200kg",
+      "Acabamento": "MDF 25mm"
+    },
+    "complementary": "Posto de trabalho ergonômico para montagens leves."
+  },
+  {
+    "id": "prod_005",
+    "name": "Bancada Testes BM-02",
+    "code": "BM-002",
+    "group": "Bancadas",
+    "line": "Linha Pesada",
+    "image": "https://img.usecurling.com/p/600/400?q=industrial%20desk&color=gray",
+    "specs": {
+      "Material": "Aço Carbono",
+      "Dimensões": "2500x1000x900mm",
+      "Capacidade": "1000kg",
+      "Acabamento": "Aço Inox"
+    },
+    "complementary": "Superfície anti-estática e resistente a solventes industriais."
+  },
+  {
+    "id": "prod_006",
+    "name": "Quadro de Gestão KPI",
+    "code": "GV-001",
+    "group": "Gestão Visual",
+    "line": null,
+    "image": "https://img.usecurling.com/p/600/400?q=whiteboard&color=white",
+    "specs": {
+      "Material": "Alumínio/Magnético",
+      "Dimensões": "1200x900mm",
+      "Capacidade": "-",
+      "Acabamento": "Branco"
+    },
+    "complementary": "Quadro magnético perfeito para gestão à vista e apontamento de produção."
+  }
+]
