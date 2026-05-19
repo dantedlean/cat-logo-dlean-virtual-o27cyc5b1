@@ -9,7 +9,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      products: {
+        Row: {
+          code: string
+          complementary: string | null
+          created_at: string
+          id: string
+          images: Json
+          line: string | null
+          name: string
+          product_group: string
+          specs: Json
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          complementary?: string | null
+          created_at?: string
+          id?: string
+          images?: Json
+          line?: string | null
+          name: string
+          product_group: string
+          specs?: Json
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          complementary?: string | null
+          created_at?: string
+          id?: string
+          images?: Json
+          line?: string | null
+          name?: string
+          product_group?: string
+          specs?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -153,3 +191,35 @@ export const Constants = {
 // IMPORTANT: The TypeScript types above map UUID, TEXT, VARCHAR all to "string".
 // Use the COLUMN TYPES section below to know the real PostgreSQL type for each column.
 // Always use the correct PostgreSQL type when writing SQL migrations.
+
+// --- COLUMN TYPES (actual PostgreSQL types) ---
+// Use this to know the real database type when writing migrations.
+// "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: products
+//   id: uuid (not null, default: gen_random_uuid())
+//   code: text (not null)
+//   name: text (not null)
+//   product_group: text (not null)
+//   line: text (nullable)
+//   images: jsonb (not null, default: '[]'::jsonb)
+//   specs: jsonb (not null, default: '{}'::jsonb)
+//   complementary: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
+//   updated_at: timestamp with time zone (not null, default: now())
+
+// --- CONSTRAINTS ---
+// Table: products
+//   UNIQUE products_code_key: UNIQUE (code)
+//   PRIMARY KEY products_pkey: PRIMARY KEY (id)
+
+// --- ROW LEVEL SECURITY POLICIES ---
+// Table: products
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+//   Policy "public_select" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
+
+// --- INDEXES ---
+// Table: products
+//   CREATE UNIQUE INDEX products_code_key ON public.products USING btree (code)
