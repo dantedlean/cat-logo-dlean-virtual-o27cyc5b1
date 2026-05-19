@@ -2,7 +2,7 @@ export interface Product {
   id: string
   name: string
   code: string
-  image: string
+  images: string[]
   group: string
   line: string | null
   specs: Record<string, string>

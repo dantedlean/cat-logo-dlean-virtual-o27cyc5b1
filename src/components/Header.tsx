@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Settings, Menu, LogOut } from 'lucide-react'
+import { Search, Settings, Menu, LogOut, Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { toast } from 'sonner'
 import useCatalogStore from '@/stores/use-catalog-store'
 import { GROUPS, LINES } from '@/lib/constants'
+import { useAuth } from '@/hooks/use-auth'
 
 export function Header() {
   const {
@@ -25,20 +26,54 @@ export function Header() {
     setSelectedGroup,
     selectedLine,
     setSelectedLine,
+    importBatch,
   } = useCatalogStore()
+  const { user, signIn, signOut } = useAuth()
   const [pwdDialog, setPwdDialog] = useState(false)
+  const [email, setEmail] = useState('dante@dlean.com.br')
   const [pwd, setPwd] = useState('')
   const activeGroup = GROUPS.find((g) => g.id === selectedGroup)
 
-  const handleActivateEdit = () => {
-    if (pwd === 'dlean2026') {
+  const handleActivateEdit = async () => {
+    const { error } = await signIn(email, pwd)
+    if (!error) {
       setEditMode(true)
       setPwdDialog(false)
       setPwd('')
-      toast.success('Modo edição ativado')
+      toast.success('Login efetuado com sucesso! Modo edição ativado.')
     } else {
-      toast.error('Senha incorreta')
+      toast.error('Credenciais inválidas')
     }
+  }
+
+  const handleLogout = async () => {
+    await signOut()
+    setEditMode(false)
+    toast.success('Sessão encerrada')
+  }
+
+  const handleImport = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        try {
+          const text = await file.text()
+          const parsed = JSON.parse(text)
+          if (Array.isArray(parsed)) {
+            await importBatch(parsed)
+            toast.success(`${parsed.length} produtos importados!`)
+          } else {
+            toast.error('O arquivo JSON deve conter um array de produtos.')
+          }
+        } catch (err) {
+          toast.error('Erro ao ler ou processar o arquivo.')
+        }
+      }
+    }
+    input.click()
   }
 
   return (
@@ -132,20 +167,29 @@ export function Header() {
         >
           Índice
         </Link>
-        {editMode ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setEditMode(false)
-              toast.success('Modo edição desativado')
-            }}
-            className="text-yellow-300 hover:text-yellow-400 hover:bg-white/10"
-            title="Desativar Edição"
-          >
-            <LogOut className="w-4 h-4 md:mr-2" />
-            <span className="hidden md:inline">Sair Edição</span>
-          </Button>
+        {editMode || user ? (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleImport}
+              className="text-white hover:bg-white/20 hidden md:flex"
+              title="Importar Lote (JSON)"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Importar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-yellow-300 hover:text-yellow-400 hover:bg-white/10"
+              title="Sair da Edição"
+            >
+              <LogOut className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Sair</span>
+            </Button>
+          </div>
         ) : (
           <Dialog open={pwdDialog} onOpenChange={setPwdDialog}>
             <DialogTrigger asChild>
@@ -159,9 +203,15 @@ export function Header() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-xl">Ativar Modo Edição</DialogTitle>
+                <DialogTitle className="text-xl">Acesso Restrito</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
                 <Input
                   type="password"
                   placeholder="Senha"

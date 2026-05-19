@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react'
 import { Product, GROUPS } from '@/lib/constants'
-import productsData from '@/data/products.json'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 interface CatalogState {
   products: Product[]
@@ -16,18 +17,43 @@ interface CatalogState {
   updateProduct: (id: string, data: Partial<Product>) => void
   deleteProduct: (id: string) => void
   addProduct: (p: Product) => void
+  importBatch: (batch: Partial<Product>[]) => void
 }
 
 const CatalogContext = createContext<CatalogState | undefined>(undefined)
 
 export const CatalogProvider = ({ children }: { children: React.ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>(productsData as Product[])
+  const [products, setProducts] = useState<Product[]>([])
   const [editMode, setEditMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('Carrinhos')
   const [selectedLine, setSelectedLine] = useState<string | null>('Linha Leve')
 
-  // Auto expiry for edit mode (30 mins)
+  const fetchProducts = async () => {
+    const { data } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (data) {
+      setProducts(
+        data.map((d) => ({
+          id: d.id,
+          code: d.code,
+          name: d.name,
+          group: d.product_group,
+          line: d.line,
+          images: d.images as string[],
+          specs: d.specs as Record<string, string>,
+          complementary: d.complementary || undefined,
+        })),
+      )
+    }
+  }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
   useEffect(() => {
     if (editMode) {
       const t = setTimeout(() => setEditMode(false), 30 * 60 * 1000)
@@ -35,7 +61,6 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
     }
   }, [editMode])
 
-  // Alert before leaving if edit mode is on
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (editMode) {
@@ -64,12 +89,82 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
     )
   }, [products, searchQuery, selectedGroup, selectedLine])
 
-  const updateProduct = (id: string, data: Partial<Product>) => {
+  const updateProduct = async (id: string, data: Partial<Product>) => {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)))
+    const payload: any = { ...data }
+    if (data.group) {
+      payload.product_group = data.group
+      delete payload.group
+    }
+    const { error } = await supabase.from('products').update(payload).eq('id', id)
+    if (error) {
+      toast.error('Erro ao salvar produto')
+      fetchProducts()
+    }
   }
 
-  const deleteProduct = (id: string) => setProducts((prev) => prev.filter((p) => p.id !== id))
-  const addProduct = (p: Product) => setProducts((prev) => [p, ...prev])
+  const deleteProduct = async (id: string) => {
+    setProducts((prev) => prev.filter((p) => p.id !== id))
+    const { error } = await supabase.from('products').delete().eq('id', id)
+    if (error) {
+      toast.error('Erro ao deletar produto')
+      fetchProducts()
+    }
+  }
+
+  const addProduct = async (p: Product) => {
+    const tempId = `temp_${Date.now()}`
+    const tempProduct = { ...p, id: tempId }
+    setProducts((prev) => [tempProduct, ...prev])
+
+    const { id, group, ...rest } = p
+    const payload: any = {
+      ...rest,
+      product_group: group,
+    }
+
+    if (payload.id && (payload.id.startsWith('prod_') || payload.id.startsWith('temp_'))) {
+      delete payload.id
+    }
+
+    const { data, error } = await supabase.from('products').insert(payload).select().single()
+
+    if (data && !error) {
+      const newProduct = {
+        id: data.id,
+        code: data.code,
+        name: data.name,
+        group: data.product_group,
+        line: data.line,
+        images: data.images as string[],
+        specs: data.specs as Record<string, string>,
+        complementary: data.complementary || undefined,
+      }
+      setProducts((prev) => prev.map((prod) => (prod.id === tempId ? newProduct : prod)))
+    } else {
+      toast.error('Erro ao adicionar produto')
+      fetchProducts()
+    }
+  }
+
+  const importBatch = async (batch: Partial<Product>[]) => {
+    const payloads = batch.map((p) => ({
+      code: p.code || `TMP-${Math.floor(Math.random() * 90000)}`,
+      name: p.name || 'Produto sem nome',
+      product_group: p.group || 'Carrinhos',
+      line: p.line || null,
+      images: p.images || [],
+      specs: p.specs || {},
+      complementary: p.complementary || '',
+    }))
+
+    const { error } = await supabase.from('products').insert(payloads)
+    if (!error) {
+      await fetchProducts()
+    } else {
+      toast.error('Erro ao importar produtos')
+    }
+  }
 
   return React.createElement(
     CatalogContext.Provider,
@@ -88,6 +183,7 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
         updateProduct,
         deleteProduct,
         addProduct,
+        importBatch,
       },
     },
     children,

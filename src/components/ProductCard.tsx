@@ -15,6 +15,15 @@ import { EditableField } from './EditableField'
 import { Product, GROUPS, LINES } from '@/lib/constants'
 import useCatalogStore from '@/stores/use-catalog-store'
 
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel'
+import { cn } from '@/lib/utils'
+
 export function ProductCard({ product }: { product: Product }) {
   const { editMode, updateProduct, deleteProduct, addProduct } = useCatalogStore()
 
@@ -47,20 +56,57 @@ export function ProductCard({ product }: { product: Product }) {
   }
 
   return (
-    <Card className="group flex flex-col h-full overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-elevation bg-white border-muted">
-      <div className="relative overflow-hidden aspect-[4/3] bg-muted flex items-center justify-center border-b">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-        />
+    <Card className="group flex flex-col h-full overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-white border-muted relative">
+      <div className="relative overflow-hidden aspect-[4/3] bg-muted flex items-center justify-center border-b group/image">
+        {product.images && product.images.length > 0 ? (
+          <Carousel className="w-full h-full">
+            <CarouselContent>
+              {product.images.map((img, idx) => (
+                <CarouselItem key={idx} className="h-full">
+                  <div className="w-full h-full aspect-[4/3]">
+                    <img
+                      src={img}
+                      alt={`${product.name} - Imagem ${idx + 1}`}
+                      className="object-cover w-full h-full transition-transform duration-500 group-hover/image:scale-105"
+                    />
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            {product.images.length > 1 && (
+              <>
+                <CarouselPrevious className="left-2 bg-white/70 hover:bg-white border-0 opacity-0 group-hover/image:opacity-100 transition-opacity w-8 h-8" />
+                <CarouselNext className="right-2 bg-white/70 hover:bg-white border-0 opacity-0 group-hover/image:opacity-100 transition-opacity w-8 h-8" />
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {product.images.map((_, i) => (
+                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/80 shadow-sm" />
+                  ))}
+                </div>
+              </>
+            )}
+          </Carousel>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground/30">
+            <ImageIcon className="w-12 h-12" />
+          </div>
+        )}
+
         {editMode && (
           <Button
-            className="absolute top-3 right-3 bg-orange-500 hover:bg-orange-600 text-white shadow-sm"
+            className="absolute top-3 right-3 bg-orange-500 hover:bg-orange-600 text-white shadow-sm z-10 opacity-0 group-hover:opacity-100 transition-opacity"
             size="icon"
             onClick={() => {
-              const url = window.prompt('Nova URL da Imagem:', product.image)
-              if (url) updateProduct(product.id, { image: url })
+              const urls = window.prompt(
+                'Novas URLs das Imagens (separadas por vírgula):',
+                (product.images || []).join(', '),
+              )
+              if (urls !== null) {
+                const arr = urls
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                updateProduct(product.id, { images: arr })
+              }
             }}
           >
             <ImageIcon className="w-4 h-4" />

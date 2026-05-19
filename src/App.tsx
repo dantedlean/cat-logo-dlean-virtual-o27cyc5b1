@@ -7,22 +7,25 @@ import ProductIndexPage from './pages/ProductIndex'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { CatalogProvider } from '@/stores/use-catalog-store'
+import { AuthProvider } from '@/hooks/use-auth'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
-    <CatalogProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner position="top-center" richColors />
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/index" element={<ProductIndexPage />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
-    </CatalogProvider>
+    <AuthProvider>
+      <CatalogProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner position="top-center" richColors />
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/index" element={<ProductIndexPage />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </CatalogProvider>
+    </AuthProvider>
   </BrowserRouter>
 )
 
