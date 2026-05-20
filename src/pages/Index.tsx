@@ -33,9 +33,56 @@ function HomeHeroCarousel() {
   const { editMode, products } = useCatalogStore()
   const { content, setContent } = useCms()
 
+  const [api, setApi] = useState<CarouselApi>()
   const [uploading, setUploading] = useState(false)
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true, playOnInit: false }))
+
+  useEffect(() => {
+    if (!api) return
+    let mounted = true
+
+    const startAutoplay = () => {
+      if (!mounted || !api) return
+      try {
+        const engine = api?.internalEngine?.()
+        if (!engine) return
+
+        const autoplay = api?.plugins?.()?.autoplay as any
+        if (autoplay && typeof autoplay.play === 'function') {
+          autoplay.play()
+        }
+      } catch (err) {
+        // silently ignore initialization errors
+      }
+    }
+
+    api.on('init', startAutoplay)
+    api.on('reInit', startAutoplay)
+
+    const timer = setTimeout(() => {
+      if (mounted) startAutoplay()
+    }, 50)
+
+    return () => {
+      mounted = false
+      clearTimeout(timer)
+      try {
+        if (api) {
+          api.off('init', startAutoplay)
+          api.off('reInit', startAutoplay)
+          const autoplay = api?.plugins?.()?.autoplay as any
+          if (autoplay && typeof autoplay.stop === 'function') {
+            autoplay.stop()
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [api])
 
   const allProductImages = Array.from(new Set(products.flatMap((p) => p.images || [])))
 
@@ -48,9 +95,6 @@ function HomeHeroCarousel() {
   }
 
   const hasImages = heroImages.length > 0
-  const plugins = useMemo(() => {
-    return [Autoplay({ delay: 5000, stopOnInteraction: true, playOnInit: false })]
-  }, [hasImages])
 
   if (!hasImages && !editMode) {
     return null
@@ -122,8 +166,9 @@ function HomeHeroCarousel() {
     <div className="w-full relative mb-10 group/hero">
       {hasImages ? (
         <Carousel
+          setApi={setApi}
           opts={{ loop: true }}
-          plugins={plugins}
+          plugins={[plugin.current]}
           className="w-full h-[300px] md:h-[400px] lg:h-[500px] rounded-3xl overflow-hidden shadow-lg"
         >
           <CarouselContent className="h-full">
@@ -271,13 +316,58 @@ function GroupCard({
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const plugin = useRef(
+    Autoplay({ delay: 3000 + index * 500, stopOnInteraction: true, playOnInit: false }),
+  )
+
+  useEffect(() => {
+    if (!api) return
+    let mounted = true
+
+    const startAutoplay = () => {
+      if (!mounted || !api) return
+      try {
+        const engine = api?.internalEngine?.()
+        if (!engine) return
+
+        const autoplay = api?.plugins?.()?.autoplay as any
+        if (autoplay && typeof autoplay.play === 'function') {
+          autoplay.play()
+        }
+      } catch (err) {
+        // silently ignore
+      }
+    }
+
+    api.on('init', startAutoplay)
+    api.on('reInit', startAutoplay)
+
+    const timer = setTimeout(() => {
+      if (mounted) startAutoplay()
+    }, 50)
+
+    return () => {
+      mounted = false
+      clearTimeout(timer)
+      try {
+        if (api) {
+          api.off('init', startAutoplay)
+          api.off('reInit', startAutoplay)
+          const autoplay = api?.plugins?.()?.autoplay as any
+          if (autoplay && typeof autoplay.stop === 'function') {
+            autoplay.stop()
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [api])
+
   const heroKey = `hero_img_group_${group}`
   const heroImage = content[heroKey]
 
   const hasHero = !!heroImage
-  const plugins = useMemo(() => {
-    return [Autoplay({ delay: 3000 + index * 500, stopOnInteraction: true, playOnInit: false })]
-  }, [hasHero, index])
 
   const allImages = Array.from(new Set(products.flatMap((p) => p.images || [])))
   const displayImages = heroImage
@@ -316,10 +406,12 @@ function GroupCard({
         onMouseEnter={() => {
           if (!heroImage && api) {
             try {
-              // Engine Availability Check
-              if (typeof api.internalEngine === 'function' && !api.internalEngine()) return
-              const autoplay = api.plugins()?.autoplay as any
-              if (autoplay) autoplay.stop()
+              const engine = api?.internalEngine?.()
+              if (!engine) return
+              const autoplay = api?.plugins?.()?.autoplay as any
+              if (autoplay && typeof autoplay.stop === 'function') {
+                autoplay.stop()
+              }
             } catch {
               /* intentionally ignored */
             }
@@ -328,13 +420,12 @@ function GroupCard({
         onMouseLeave={() => {
           if (!heroImage && api) {
             try {
-              // Engine Availability Check
-              if (typeof api.internalEngine === 'function' && !api.internalEngine()) return
-              // Safe Visibility Check wrapper for interaction
-              const documentIsHidden = typeof document !== 'undefined' ? document.hidden : false
-              if (documentIsHidden) return
-              const autoplay = api.plugins()?.autoplay as any
-              if (autoplay) autoplay.play()
+              const engine = api?.internalEngine?.()
+              if (!engine) return
+              const autoplay = api?.plugins?.()?.autoplay as any
+              if (autoplay && typeof autoplay.play === 'function') {
+                autoplay.play()
+              }
             } catch {
               /* intentionally ignored */
             }
@@ -346,8 +437,8 @@ function GroupCard({
         ) : (
           <Carousel
             setApi={setApi}
-            opts={{ loop: true }}
-            plugins={plugins}
+            opts={{ loop: true, watchDrag: false }}
+            plugins={[plugin.current]}
             className="w-full h-full pointer-events-none"
           >
             <CarouselContent className="h-full">
@@ -457,9 +548,7 @@ function HomeHeroView() {
   }, [products])
 
   const handleNav = (group: string) => {
-    if (typeof setFilters === 'function') {
-      setFilters(group, null, '')
-    }
+    setFilters(group, null, '')
   }
 
   return (
@@ -558,7 +647,7 @@ function LineSelectionView({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => typeof setFilters === 'function' && setFilters(null, null, '')}
+          onClick={() => setFilters(null, null, '')}
           className="rounded-full shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -712,9 +801,7 @@ export default function CatalogPage() {
 
     if (urlGroup !== selectedGroup || urlLine !== selectedLine || urlSearch !== searchQuery) {
       isSyncing.current = true
-      if (typeof setFilters === 'function') {
-        setFilters(urlGroup, urlLine, urlSearch)
-      }
+      setFilters(urlGroup, urlLine, urlSearch)
       setTimeout(() => {
         isSyncing.current = false
       }, 50)
@@ -815,7 +902,7 @@ export default function CatalogPage() {
                 selectedLine !== 'ALL'
               ) {
                 setSelectedLine(null)
-              } else if (typeof setFilters === 'function') {
+              } else {
                 setFilters(null, null, '')
               }
             }}
