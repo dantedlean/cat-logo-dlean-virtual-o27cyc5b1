@@ -58,16 +58,22 @@ const Carousel = React.forwardRef<
       return
     }
 
+    if (typeof api.internalEngine === 'function' && !api.internalEngine()) {
+      return
+    }
+
     setCanScrollPrev(api.canScrollPrev())
     setCanScrollNext(api.canScrollNext())
   }, [])
 
   const scrollPrev = React.useCallback(() => {
-    api?.scrollPrev()
+    if (!api || (typeof api.internalEngine === 'function' && !api.internalEngine())) return
+    api.scrollPrev()
   }, [api])
 
   const scrollNext = React.useCallback(() => {
-    api?.scrollNext()
+    if (!api || (typeof api.internalEngine === 'function' && !api.internalEngine())) return
+    api.scrollNext()
   }, [api])
 
   const handleKeyDown = React.useCallback(
@@ -100,8 +106,59 @@ const Carousel = React.forwardRef<
     api.on('reInit', onSelect)
     api.on('select', onSelect)
 
+    // Resilient Carousel Initialization & Defensive Lifecycle Management
+    // Ensure Autoplay plugin only accesses engine when it's safe and component is mounted
+    const safeAutoplayControl = () => {
+      try {
+        const autoplay = api.plugins()?.autoplay as any
+        if (!autoplay) return
+
+        // Engine Availability Check
+        if (typeof api.internalEngine === 'function' && !api.internalEngine()) return
+
+        // Safe Visibility Check wrapper for document state
+        const documentIsHidden = typeof document !== 'undefined' ? document.hidden : false
+
+        if (documentIsHidden) {
+          autoplay.stop()
+        } else {
+          autoplay.play()
+        }
+      } catch {
+        // Suppress internal engine read errors during unmount/transitions
+      }
+    }
+
+    // Wrap visibility changes to provide a safe default value if engine isn't ready
+    const handleVisibilityChange = () => {
+      safeAutoplayControl()
+    }
+
+    // Asynchronous Plugin Activation: Trigger on init or reInit to safely start
+    api.on('init', safeAutoplayControl)
+    api.on('reInit', safeAutoplayControl)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // If already initialized, safely attempt play
+    if (typeof api.internalEngine === 'function' && api.internalEngine()) {
+      safeAutoplayControl()
+    }
+
     return () => {
+      api.off('init', safeAutoplayControl)
+      api.off('reInit', safeAutoplayControl)
       api?.off('select', onSelect)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+
+      // Mount/Unmount Safety
+      try {
+        const autoplay = api.plugins()?.autoplay as any
+        if (autoplay && typeof api.internalEngine === 'function' && api.internalEngine()) {
+          autoplay.stop()
+        }
+      } catch {
+        // Suppress errors during unmount phase
+      }
     }
   }, [api, onSelect])
 
