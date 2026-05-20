@@ -3,6 +3,8 @@ import { Product, GROUPS } from '@/lib/constants'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
+export type { Product } from '@/lib/constants'
+
 interface CatalogState {
   products: Product[]
   editMode: boolean
@@ -14,6 +16,7 @@ interface CatalogState {
   setSearchQuery: (v: string) => void
   setSelectedGroup: (v: string) => void
   setSelectedLine: (v: string | null) => void
+  setFilters: (group: string | null, line: string | null, search: string) => void
   updateProduct: (id: string, data: Partial<Product>) => void
   deleteProduct: (id: string) => void
   addProduct: (p: Product) => void
@@ -28,6 +31,12 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('Carrinhos')
   const [selectedLine, setSelectedLine] = useState<string | null>('Linha Leve')
+
+  const setFilters = (group: string | null, line: string | null, search: string) => {
+    setSelectedGroup(group || '')
+    setSelectedLine(line)
+    setSearchQuery(search || '')
+  }
 
   const fetchProducts = async () => {
     const { data } = await supabase
@@ -180,6 +189,7 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
         setSearchQuery,
         setSelectedGroup,
         setSelectedLine,
+        setFilters,
         updateProduct,
         deleteProduct,
         addProduct,

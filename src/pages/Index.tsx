@@ -457,7 +457,9 @@ function HomeHeroView() {
   }, [products])
 
   const handleNav = (group: string) => {
-    setFilters(group, null, '')
+    if (typeof setFilters === 'function') {
+      setFilters(group, null, '')
+    }
   }
 
   return (
@@ -556,7 +558,7 @@ function LineSelectionView({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setFilters(null, null, '')}
+          onClick={() => typeof setFilters === 'function' && setFilters(null, null, '')}
           className="rounded-full shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -710,7 +712,9 @@ export default function CatalogPage() {
 
     if (urlGroup !== selectedGroup || urlLine !== selectedLine || urlSearch !== searchQuery) {
       isSyncing.current = true
-      setFilters(urlGroup, urlLine, urlSearch)
+      if (typeof setFilters === 'function') {
+        setFilters(urlGroup, urlLine, urlSearch)
+      }
       setTimeout(() => {
         isSyncing.current = false
       }, 50)
@@ -811,7 +815,7 @@ export default function CatalogPage() {
                 selectedLine !== 'ALL'
               ) {
                 setSelectedLine(null)
-              } else {
+              } else if (typeof setFilters === 'function') {
                 setFilters(null, null, '')
               }
             }}
