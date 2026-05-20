@@ -17,10 +17,8 @@ import { CmsText } from '@/components/CmsText'
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { GROUPS, LINES } from '@/lib/constants'
 import { type CarouselApi, Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
-import Autoplay from 'embla-carousel-autoplay'
 import { useCms } from '@/stores/use-cms-store'
 import { supabase } from '@/lib/supabase/client'
-import { useSearchParams } from 'react-router-dom'
 import {
   Dialog,
   DialogContent,
@@ -34,55 +32,31 @@ function HomeHeroCarousel() {
   const { content, setContent } = useCms()
 
   const [api, setApi] = useState<CarouselApi>()
+  const [isHovered, setIsHovered] = useState(false)
+
   const [uploading, setUploading] = useState(false)
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true, playOnInit: false }))
-
   useEffect(() => {
     if (!api) return
-    let mounted = true
 
-    const startAutoplay = () => {
-      if (!mounted || !api) return
-      try {
-        const engine = api?.internalEngine?.()
-        if (!engine) return
-
-        const autoplay = api?.plugins?.()?.autoplay as any
-        if (autoplay && typeof autoplay.play === 'function') {
-          autoplay.play()
-        }
-      } catch (err) {
-        // silently ignore initialization errors
-      }
-    }
-
-    api.on('init', startAutoplay)
-    api.on('reInit', startAutoplay)
-
-    const timer = setTimeout(() => {
-      if (mounted) startAutoplay()
-    }, 50)
-
-    return () => {
-      mounted = false
-      clearTimeout(timer)
-      try {
-        if (api) {
-          api.off('init', startAutoplay)
-          api.off('reInit', startAutoplay)
-          const autoplay = api?.plugins?.()?.autoplay as any
-          if (autoplay && typeof autoplay.stop === 'function') {
-            autoplay.stop()
+    const timer = setInterval(() => {
+      if (!isHovered && api && !document.hidden) {
+        try {
+          const engine =
+            typeof (api as any).internalEngine === 'function' ? (api as any).internalEngine() : null
+          if (engine !== undefined) {
+            api.scrollNext()
           }
+        } catch (e) {
+          // ignore
         }
-      } catch (e) {
-        // ignore
       }
-    }
-  }, [api])
+    }, 5000)
+
+    return () => clearInterval(timer)
+  }, [api, isHovered])
 
   const allProductImages = Array.from(new Set(products.flatMap((p) => p.images || [])))
 
@@ -94,9 +68,7 @@ function HomeHeroCarousel() {
     /* intentionally ignored */
   }
 
-  const hasImages = heroImages.length > 0
-
-  if (!hasImages && !editMode) {
+  if (heroImages.length === 0 && !editMode) {
     return null
   }
 
@@ -164,12 +136,13 @@ function HomeHeroCarousel() {
 
   return (
     <div className="w-full relative mb-10 group/hero">
-      {hasImages ? (
+      {heroImages.length > 0 ? (
         <Carousel
           setApi={setApi}
           opts={{ loop: true }}
-          plugins={[plugin.current]}
           className="w-full h-[300px] md:h-[400px] lg:h-[500px] rounded-3xl overflow-hidden shadow-lg"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
           <CarouselContent className="h-full">
             {heroImages.map((img, idx) => (
@@ -310,64 +283,40 @@ function GroupCard({
   onNavigate: (g: string) => void
 }) {
   const [api, setApi] = useState<CarouselApi>()
+  const [isHovered, setIsHovered] = useState(false)
   const { editMode } = useCatalogStore()
+
+  useEffect(() => {
+    if (!api) return
+
+    const timer = setInterval(
+      () => {
+        if (!isHovered && api && !document.hidden) {
+          try {
+            const engine =
+              typeof (api as any).internalEngine === 'function'
+                ? (api as any).internalEngine()
+                : null
+            if (engine !== undefined) {
+              api.scrollNext()
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      },
+      3000 + index * 500,
+    )
+
+    return () => clearInterval(timer)
+  }, [api, isHovered, index])
   const { content, setContent } = useCms()
   const [uploading, setUploading] = useState(false)
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const plugin = useRef(
-    Autoplay({ delay: 3000 + index * 500, stopOnInteraction: true, playOnInit: false }),
-  )
-
-  useEffect(() => {
-    if (!api) return
-    let mounted = true
-
-    const startAutoplay = () => {
-      if (!mounted || !api) return
-      try {
-        const engine = api?.internalEngine?.()
-        if (!engine) return
-
-        const autoplay = api?.plugins?.()?.autoplay as any
-        if (autoplay && typeof autoplay.play === 'function') {
-          autoplay.play()
-        }
-      } catch (err) {
-        // silently ignore
-      }
-    }
-
-    api.on('init', startAutoplay)
-    api.on('reInit', startAutoplay)
-
-    const timer = setTimeout(() => {
-      if (mounted) startAutoplay()
-    }, 50)
-
-    return () => {
-      mounted = false
-      clearTimeout(timer)
-      try {
-        if (api) {
-          api.off('init', startAutoplay)
-          api.off('reInit', startAutoplay)
-          const autoplay = api?.plugins?.()?.autoplay as any
-          if (autoplay && typeof autoplay.stop === 'function') {
-            autoplay.stop()
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-  }, [api])
-
   const heroKey = `hero_img_group_${group}`
   const heroImage = content[heroKey]
-
-  const hasHero = !!heroImage
 
   const allImages = Array.from(new Set(products.flatMap((p) => p.images || [])))
   const displayImages = heroImage
@@ -403,42 +352,15 @@ function GroupCard({
       <div
         className="relative h-72 md:h-96 rounded-3xl overflow-hidden cursor-pointer group/card shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
         onClick={() => onNavigate(group)}
-        onMouseEnter={() => {
-          if (!heroImage && api) {
-            try {
-              const engine = api?.internalEngine?.()
-              if (!engine) return
-              const autoplay = api?.plugins?.()?.autoplay as any
-              if (autoplay && typeof autoplay.stop === 'function') {
-                autoplay.stop()
-              }
-            } catch {
-              /* intentionally ignored */
-            }
-          }
-        }}
-        onMouseLeave={() => {
-          if (!heroImage && api) {
-            try {
-              const engine = api?.internalEngine?.()
-              if (!engine) return
-              const autoplay = api?.plugins?.()?.autoplay as any
-              if (autoplay && typeof autoplay.play === 'function') {
-                autoplay.play()
-              }
-            } catch {
-              /* intentionally ignored */
-            }
-          }
-        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         {heroImage ? (
           <img src={heroImage} alt={group} className="w-full h-full object-cover" />
         ) : (
           <Carousel
             setApi={setApi}
-            opts={{ loop: true, watchDrag: false }}
-            plugins={[plugin.current]}
+            opts={{ loop: true }}
             className="w-full h-full pointer-events-none"
           >
             <CarouselContent className="h-full">
@@ -532,7 +454,7 @@ function GroupCard({
 }
 
 function HomeHeroView() {
-  const { products, setFilters } = useCatalogStore()
+  const { products, setSelectedGroup, setSelectedLine } = useCatalogStore()
 
   const groups = useMemo(() => {
     const dynamicGroups = products.map((p) => p.group)
@@ -548,7 +470,8 @@ function HomeHeroView() {
   }, [products])
 
   const handleNav = (group: string) => {
-    setFilters(group, null, '')
+    setSelectedGroup(group)
+    setSelectedLine(null)
   }
 
   return (
@@ -591,7 +514,7 @@ function LineSelectionView({
   group: string
   onNavigate: (l: string | null) => void
 }) {
-  const { setFilters, editMode, products } = useCatalogStore()
+  const { setSelectedGroup, editMode, products } = useCatalogStore()
   const { content, setContent } = useCms()
   const [uploading, setUploading] = useState<string | null>(null)
   const [galleryForLine, setGalleryForLine] = useState<string | null>(null)
@@ -647,7 +570,7 @@ function LineSelectionView({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setFilters(null, null, '')}
+          onClick={() => setSelectedGroup(null)}
           className="rounded-full shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -777,7 +700,6 @@ function LineSelectionView({
 export default function CatalogPage() {
   const {
     products,
-    isLoading,
     selectedGroup,
     selectedLine,
     searchQuery,
@@ -786,40 +708,8 @@ export default function CatalogPage() {
     setSearchQuery,
     setSelectedGroup,
     setSelectedLine,
-    setFilters,
     addProduct,
   } = useCatalogStore()
-
-  const [searchParams, setSearchParams] = useSearchParams()
-  const isSyncing = useRef(false)
-
-  // Sync URL to Store
-  useEffect(() => {
-    const urlGroup = searchParams.get('group')
-    const urlLine = searchParams.get('line')
-    const urlSearch = searchParams.get('q') || ''
-
-    if (urlGroup !== selectedGroup || urlLine !== selectedLine || urlSearch !== searchQuery) {
-      isSyncing.current = true
-      setFilters(urlGroup, urlLine, urlSearch)
-      setTimeout(() => {
-        isSyncing.current = false
-      }, 50)
-    }
-  }, [searchParams])
-
-  // Sync Store to URL
-  useEffect(() => {
-    if (isSyncing.current) return
-    const params = new URLSearchParams()
-    if (selectedGroup) params.set('group', selectedGroup)
-    if (selectedLine) params.set('line', selectedLine)
-    if (searchQuery) params.set('q', searchQuery)
-
-    if (params.toString() !== searchParams.toString()) {
-      setSearchParams(params)
-    }
-  }, [selectedGroup, selectedLine, searchQuery])
 
   const activeGroupInfo = GROUPS.find((g) => g.id === selectedGroup)
   const activeGroupLines = useMemo(() => {
@@ -833,15 +723,6 @@ export default function CatalogPage() {
     })
     return Array.from(lines).sort((a, b) => a.localeCompare(b))
   }, [selectedGroup, activeGroupInfo, products])
-
-  if (isLoading && products.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center py-20 animate-pulse">
-        <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-        <p className="text-muted-foreground">Carregando catálogo...</p>
-      </div>
-    )
-  }
 
   if (!selectedGroup && !searchQuery) {
     return <HomeHeroView />
@@ -903,7 +784,8 @@ export default function CatalogPage() {
               ) {
                 setSelectedLine(null)
               } else {
-                setFilters(null, null, '')
+                setSelectedGroup(null)
+                setSelectedLine(null)
               }
             }}
             title="Voltar"
