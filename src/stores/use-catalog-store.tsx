@@ -9,12 +9,12 @@ interface CatalogState {
   products: Product[]
   editMode: boolean
   searchQuery: string
-  selectedGroup: string
+  selectedGroup: string | null
   selectedLine: string | null
   filteredProducts: Product[]
   setEditMode: (v: boolean) => void
   setSearchQuery: (v: string) => void
-  setSelectedGroup: (v: string) => void
+  setSelectedGroup: (v: string | null) => void
   setSelectedLine: (v: string | null) => void
   setFilters: (group: string | null, line: string | null, search: string) => void
   updateProduct: (id: string, data: Partial<Product>) => void
@@ -29,7 +29,7 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
   const [products, setProducts] = useState<Product[]>([])
   const [editMode, setEditMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedGroup, setSelectedGroup] = useState('Carrinhos')
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [selectedLine, setSelectedLine] = useState<string | null>('Linha Leve')
 
   const setFilters = (group: string | null, line: string | null, search: string) => {

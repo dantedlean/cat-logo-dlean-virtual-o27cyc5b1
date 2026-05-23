@@ -97,8 +97,16 @@ function FamilyHeroCarousel() {
     if (!api) return
     const timer = setInterval(() => {
       if (!isHovered && !document.hidden && api) {
-        if (typeof api.scrollNext === 'function') {
-          api.scrollNext()
+        try {
+          if (
+            typeof api.scrollNext === 'function' &&
+            typeof api.internalEngine === 'function' &&
+            api.internalEngine()
+          ) {
+            api.scrollNext()
+          }
+        } catch (e) {
+          // ignore error
         }
       }
     }, 5000)
@@ -209,7 +217,11 @@ function GroupCard({
       () => {
         if (!isHovered && api && !document.hidden) {
           try {
-            if (typeof api.scrollNext === 'function') {
+            if (
+              typeof api.scrollNext === 'function' &&
+              typeof api.internalEngine === 'function' &&
+              api.internalEngine()
+            ) {
               api.scrollNext()
             }
           } catch (e) {

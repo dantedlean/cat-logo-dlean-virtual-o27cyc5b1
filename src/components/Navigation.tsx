@@ -9,6 +9,7 @@ export function Navigation() {
   const activeGroup = GROUPS.find((g) => g.id === selectedGroup)
 
   if (searchQuery) return null // Hide navigation during global search
+  if (!selectedGroup) return null // Hide on Home page since Header has menu
 
   return (
     <div className="sticky top-16 z-40 bg-background border-b shadow-sm hidden md:block transition-all">

@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Settings, Menu, LogOut, Upload } from 'lucide-react'
+import {
+  Search,
+  Settings,
+  Menu,
+  LogOut,
+  Upload,
+  ChevronDown,
+  ImagePlus,
+  Loader2,
+} from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,10 +20,18 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import useCatalogStore from '@/stores/use-catalog-store'
 import { GROUPS, LINES } from '@/lib/constants'
 import { useAuth } from '@/hooks/use-auth'
+import { useCms } from '@/stores/use-cms-store'
+import { supabase } from '@/lib/supabase/client'
 
 export function Header() {
   const {
@@ -29,10 +46,16 @@ export function Header() {
     importBatch,
   } = useCatalogStore()
   const { user, signIn, signOut } = useAuth()
+  const { content, setContent } = useCms()
   const [pwdDialog, setPwdDialog] = useState(false)
   const [email, setEmail] = useState('dante@dlean.com.br')
   const [pwd, setPwd] = useState('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
   const activeGroup = GROUPS.find((g) => g.id === selectedGroup)
+  const logoUrl =
+    content['logo'] ||
+    'https://skip-prod-storage.s3.amazonaws.com/attachments/1740058564030_download.png'
 
   const handleActivateEdit = async () => {
     const { error } = await signIn(email, pwd)
@@ -76,6 +99,25 @@ export function Header() {
     input.click()
   }
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const fileName = `logo-${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('images').upload(fileName, file)
+      if (error) throw error
+      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
+      await setContent('logo', data.publicUrl, 'logo')
+      toast.success('Logo atualizado!')
+    } catch (error) {
+      toast.error('Erro ao atualizar logo')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 bg-primary text-primary-foreground h-16 flex items-center px-4 md:px-6 justify-between shadow-md">
       <div className="flex items-center gap-4">
@@ -90,10 +132,22 @@ export function Header() {
             <SheetContent side="left" className="bg-background text-foreground w-[280px]">
               <div className="mb-6">
                 <img
-                  src="https://skip-prod-storage.s3.amazonaws.com/attachments/1740058564030_download.png"
+                  src={logoUrl}
                   alt="D-Lean Solutions"
-                  className="h-8 w-auto object-contain"
+                  className="h-8 w-auto object-contain bg-white rounded p-1"
                 />
+              </div>
+              <div className="grid gap-1 mb-6">
+                <Button
+                  variant={!selectedGroup && !searchQuery ? 'secondary' : 'ghost'}
+                  className="justify-start font-medium"
+                  onClick={() => {
+                    setSelectedGroup(null)
+                    setSearchQuery('')
+                  }}
+                >
+                  Home
+                </Button>
               </div>
               <div className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                 Grupos
@@ -144,16 +198,70 @@ export function Header() {
             </SheetContent>
           </Sheet>
         </div>
+
         <Link
           to="/"
-          className="hidden sm:flex items-center gap-2 transition-transform hover:scale-[1.02]"
+          onClick={() => {
+            setSelectedGroup(null)
+            setSearchQuery('')
+          }}
+          className="hidden sm:flex items-center gap-2 transition-transform hover:scale-[1.02] relative group"
         >
           <img
-            src="https://skip-prod-storage.s3.amazonaws.com/attachments/1740058564030_download.png"
+            src={logoUrl}
             alt="D-Lean Solutions"
-            className="h-10 w-auto object-contain"
+            className="h-10 w-auto object-contain bg-white rounded p-1"
           />
+          {editMode && (
+            <label
+              className="absolute -bottom-2 -right-2 bg-black/80 p-1 rounded cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {uploadingLogo ? (
+                <Loader2 className="w-3 h-3 animate-spin text-white" />
+              ) : (
+                <ImagePlus className="w-3 h-3 text-white" />
+              )}
+              <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+            </label>
+          )}
         </Link>
+
+        {/* Superior Navigation Menu (Desktop) */}
+        <div className="hidden lg:flex items-center ml-4 gap-1">
+          <Button
+            variant="ghost"
+            className={`text-white hover:bg-white/20 font-medium ${!selectedGroup && !searchQuery ? 'bg-white/10' : ''}`}
+            onClick={() => {
+              setSelectedGroup(null)
+              setSearchQuery('')
+            }}
+          >
+            Home
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="text-white hover:bg-white/20 font-medium">
+                Produtos <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="start">
+              {GROUPS.map((g) => (
+                <DropdownMenuItem
+                  key={g.id}
+                  onClick={() => {
+                    setSelectedGroup(g.id)
+                    setSelectedLine(g.hasLines ? 'Linha Leve' : null)
+                    setSearchQuery('')
+                  }}
+                  className="cursor-pointer"
+                >
+                  {g.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="flex-1 max-w-xl mx-4">
