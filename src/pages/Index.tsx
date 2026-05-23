@@ -1,377 +1,11 @@
-import {
-  ChevronRight,
-  PlusCircle,
-  Search,
-  ArrowLeft,
-  ImagePlus,
-  Loader2,
-  Images,
-} from 'lucide-react'
+import { useMemo } from 'react'
+import { Search, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProductCard } from '@/components/ProductCard'
-import useCatalogStore, { Product } from '@/stores/use-catalog-store'
-import { toast } from 'sonner'
-import { CmsText } from '@/components/CmsText'
-import { useMemo, useRef, useState, useEffect } from 'react'
-import { GROUPS, LINES } from '@/lib/constants'
-import { type CarouselApi, Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
-import { useCms } from '@/stores/use-cms-store'
-import { supabase } from '@/lib/supabase/client'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-
-function UploadHeroButton({ group, currentImage }: { group: string; currentImage: string }) {
-  const { setContent } = useCms()
-  const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    try {
-      const ext = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
-      const { error } = await supabase.storage.from('images').upload(fileName, file)
-      if (error) throw error
-      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
-      await setContent(`hero_img_group_${group}`, data.publicUrl, 'hero_banner')
-      toast.success('Imagem hero atualizada!')
-    } catch (error) {
-      toast.error('Erro ao enviar imagem')
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  return (
-    <div className="flex gap-2">
-      <label className="cursor-pointer">
-        <div className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl h-10 px-4 rounded-md flex items-center justify-center transition-colors font-semibold border border-white/10 gap-2">
-          {uploading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <ImagePlus className="w-4 h-4" />
-          )}
-          Alterar Imagem Capa
-        </div>
-        <input
-          type="file"
-          className="hidden"
-          accept="image/*"
-          onChange={handleUpload}
-          ref={fileInputRef}
-        />
-      </label>
-    </div>
-  )
-}
-
-function FamilyHeroCarousel() {
-  const { editMode, setSelectedGroup, setSelectedLine } = useCatalogStore()
-  const { content } = useCms()
-  const [api, setApi] = useState<CarouselApi>()
-  const [isHovered, setIsHovered] = useState(false)
-  const [current, setCurrent] = useState(0)
-
-  const handleNav = (group: string) => {
-    setSelectedGroup(group)
-    setSelectedLine(null)
-  }
-
-  useEffect(() => {
-    if (!api) return
-    setCurrent(api.selectedScrollSnap())
-    api.on('select', () => {
-      setCurrent(api.selectedScrollSnap())
-    })
-  }, [api])
-
-  useEffect(() => {
-    if (!api) return
-    const timer = setInterval(() => {
-      if (!isHovered && !document.hidden && api) {
-        try {
-          if (
-            typeof api.scrollNext === 'function' &&
-            typeof api.internalEngine === 'function' &&
-            api.internalEngine()
-          ) {
-            api.scrollNext()
-          }
-        } catch (e) {
-          // ignore error
-        }
-      }
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [api, isHovered])
-
-  return (
-    <div className="w-[100vw] relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] group/hero bg-black mb-10 shadow-xl border-b border-border">
-      <Carousel
-        setApi={setApi}
-        opts={{ loop: true }}
-        className="w-full h-[350px] md:h-[500px] lg:h-[600px] overflow-hidden"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <CarouselContent className="h-full">
-          {GROUPS.map((group, idx) => {
-            const heroKey = `hero_img_group_${group.id}`
-            const defaultColors = [
-              'blue',
-              'gray',
-              'green',
-              'orange',
-              'red',
-              'black',
-              'white',
-              'yellow',
-            ]
-            const heroImage =
-              content[heroKey] ||
-              `https://img.usecurling.com/p/1600/900?q=industry&color=${defaultColors[idx % defaultColors.length]}`
-
-            return (
-              <CarouselItem
-                key={group.id}
-                className="h-full relative cursor-pointer flex-[0_0_100%] min-w-0"
-                onClick={() => handleNav(group.id)}
-              >
-                <img
-                  src={heroImage}
-                  alt={group.label}
-                  className="w-full h-full object-cover opacity-80 transition-opacity duration-500 hover:opacity-100"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-8 md:p-20 pb-16 md:pb-24">
-                  <div className="max-w-[1600px] mx-auto w-full px-4 md:px-8">
-                    <h2 className="text-white text-4xl md:text-6xl font-extrabold drop-shadow-2xl">
-                      {group.label}
-                    </h2>
-                    <p className="text-white/90 text-lg md:text-2xl mt-4 font-medium drop-shadow-lg max-w-2xl">
-                      Descubra nossa linha completa e de alta performance de{' '}
-                      {group.label.toLowerCase()}.
-                    </p>
-                    <Button
-                      variant="default"
-                      size="lg"
-                      className="mt-8 shadow-xl text-lg px-8 rounded-full pointer-events-none"
-                    >
-                      Explorar {group.label}
-                    </Button>
-                  </div>
-                </div>
-                {editMode && (
-                  <div className="absolute top-4 right-4 z-40" onClick={(e) => e.stopPropagation()}>
-                    <UploadHeroButton group={group.id} currentImage={heroImage} />
-                  </div>
-                )}
-              </CarouselItem>
-            )
-          })}
-        </CarouselContent>
-      </Carousel>
-
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-20 pointer-events-none">
-        {GROUPS.map((_, idx) => (
-          <div
-            key={idx}
-            className={`w-2.5 h-2.5 rounded-full shadow-sm transition-all duration-300 ${current === idx ? 'bg-primary scale-125' : 'bg-white/50'}`}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function GroupCard({
-  group,
-  products,
-  index,
-  onNavigate,
-}: {
-  group: string
-  products: Product[]
-  index: number
-  onNavigate: (g: string) => void
-}) {
-  const [api, setApi] = useState<CarouselApi>()
-  const [isHovered, setIsHovered] = useState(false)
-  const { editMode } = useCatalogStore()
-  const { content, setContent } = useCms()
-  const [uploading, setUploading] = useState(false)
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (!api) return
-
-    const timer = setInterval(
-      () => {
-        if (!isHovered && api && !document.hidden) {
-          try {
-            if (
-              typeof api.scrollNext === 'function' &&
-              typeof api.internalEngine === 'function' &&
-              api.internalEngine()
-            ) {
-              api.scrollNext()
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
-      },
-      3000 + index * 500,
-    )
-
-    return () => clearInterval(timer)
-  }, [api, isHovered, index])
-
-  const heroKey = `hero_img_group_${group}`
-  const heroImage = content[heroKey]
-
-  const allImages = Array.from(new Set(products.flatMap((p) => p.images || [])))
-  const displayImages = heroImage
-    ? [heroImage]
-    : allImages.length > 0
-      ? allImages.slice(0, 5)
-      : [
-          `https://img.usecurling.com/p/800/800?q=industry&color=${['blue', 'gray', 'green', 'orange', 'red', 'black', 'white', 'yellow'][index % 8] || 'black'}`,
-        ]
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    try {
-      const ext = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
-      const { error } = await supabase.storage.from('images').upload(fileName, file)
-      if (error) throw error
-      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
-      await setContent(heroKey, data.publicUrl, 'hero_banner')
-      toast.success('Imagem hero atualizada!')
-    } catch (error) {
-      toast.error('Erro ao enviar imagem')
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  return (
-    <>
-      <div
-        className="relative h-72 md:h-96 rounded-3xl overflow-hidden cursor-pointer group/card shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
-        onClick={() => onNavigate(group)}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {heroImage ? (
-          <img src={heroImage} alt={group} className="w-full h-full object-cover" />
-        ) : (
-          <Carousel
-            setApi={setApi}
-            opts={{ loop: true }}
-            className="w-full h-full pointer-events-none"
-          >
-            <CarouselContent className="h-full">
-              {displayImages.map((img, idx) => (
-                <CarouselItem key={idx} className="h-full">
-                  <img src={img} alt={`${group} ${idx}`} className="w-full h-full object-cover" />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-        )}
-
-        {editMode && (
-          <div
-            className="absolute top-4 right-4 z-30 flex gap-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Button
-              size="icon"
-              variant="secondary"
-              className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl border-white/10 h-10 w-10 rounded-md"
-              onClick={() => setIsGalleryOpen(true)}
-              title="Escolher da Galeria"
-            >
-              <Images className="w-5 h-5" />
-            </Button>
-            <label className="cursor-pointer">
-              <div
-                className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl border border-white/10 h-10 w-10 rounded-md flex items-center justify-center transition-colors"
-                title="Upload Imagem Hero"
-              >
-                {uploading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <ImagePlus className="w-5 h-5" />
-                )}
-              </div>
-              <input type="file" className="hidden" accept="image/*" onChange={handleUpload} />
-            </label>
-          </div>
-        )}
-
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent group-hover/card:via-black/40 transition-colors flex flex-col justify-end p-8 pointer-events-none z-10">
-          <h3 className="text-white text-3xl font-bold drop-shadow-lg mb-2">{group}</h3>
-          <div className="flex items-center text-white/80 font-medium text-sm group-hover/card:text-white transition-colors">
-            Ver {products.length} {products.length === 1 ? 'produto' : 'produtos'}{' '}
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </div>
-        </div>
-      </div>
-
-      {editMode && (
-        <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Selecionar Imagem Hero para {group}</DialogTitle>
-              <DialogDescription>
-                Escolha uma imagem para ser a capa oficial desta categoria.
-              </DialogDescription>
-            </DialogHeader>
-            {allImages.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Nenhuma imagem de produto encontrada nesta categoria.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                {allImages.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all group/gal ${heroImage === img ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-transparent hover:border-primary/50'}`}
-                    onClick={() => {
-                      setContent(heroKey, img, 'hero_banner')
-                      setIsGalleryOpen(false)
-                      toast.success('Imagem hero atualizada com sucesso!')
-                    }}
-                  >
-                    <img
-                      src={img}
-                      alt={`Opção ${idx}`}
-                      className="w-full h-full object-cover transition-transform group-hover/gal:scale-105"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      )}
-    </>
-  )
-}
+import useCatalogStore from '@/stores/use-catalog-store'
+import { GROUPS } from '@/lib/constants'
+import { HeroCarousel } from '@/components/HeroCarousel'
+import { GroupProductsView } from '@/components/GroupProductsView'
 
 function HomeHeroView() {
   const { products, setSelectedGroup, setSelectedLine } = useCatalogStore()
@@ -397,13 +31,13 @@ function HomeHeroView() {
   return (
     <div className="flex-1 flex flex-col w-full pb-20 overflow-x-hidden">
       <section className="animate-fade-in-down w-full">
-        <FamilyHeroCarousel />
+        <HeroCarousel />
       </section>
 
-      <section className="animate-fade-in-up mt-10">
+      <section className="animate-fade-in-up mt-10 container mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl md:text-4xl font-extrabold mb-8 text-foreground tracking-tight flex items-center gap-3">
           <div className="w-2 h-8 bg-primary rounded-full hidden sm:block"></div>
-          <CmsText id="hero_title_main" defaultText="Nossas Famílias de Produtos" />
+          Explorar Famílias
         </h2>
 
         {groups.length === 0 ? (
@@ -412,14 +46,23 @@ function HomeHeroView() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {groups.map((group, i) => (
-              <GroupCard
+            {groups.map((group, idx) => (
+              <div
                 key={group}
-                group={group}
-                products={products.filter((p) => p.group === group)}
-                index={i}
-                onNavigate={handleNav}
-              />
+                className="relative h-48 md:h-64 rounded-3xl overflow-hidden cursor-pointer group/card shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-muted flex items-center justify-center animate-fade-in-up"
+                style={{ animationDelay: `${idx * 50}ms` }}
+                onClick={() => handleNav(group)}
+              >
+                <img
+                  src={`https://img.usecurling.com/p/800/600?q=${encodeURIComponent(group)}&color=gray`}
+                  alt={group}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover/card:via-black/50 transition-colors z-0" />
+                <h3 className="text-white text-3xl md:text-4xl font-bold drop-shadow-xl z-10">
+                  {group}
+                </h3>
+              </div>
             ))}
           </div>
         )}
@@ -428,327 +71,23 @@ function HomeHeroView() {
   )
 }
 
-function LineSelectionView({
-  group,
-  onNavigate,
-}: {
-  group: string
-  onNavigate: (l: string | null) => void
-}) {
-  const { setSelectedGroup, editMode, products } = useCatalogStore()
-  const { content, setContent } = useCms()
-  const [uploading, setUploading] = useState<string | null>(null)
-  const [galleryForLine, setGalleryForLine] = useState<string | null>(null)
-
-  const lines = [
-    {
-      id: 'Linha Leve',
-      defaultImage: 'https://img.usecurling.com/p/800/600?q=light%20industry&color=gray',
-    },
-    {
-      id: 'Linha Média',
-      defaultImage: 'https://img.usecurling.com/p/800/600?q=factory&color=blue',
-    },
-    {
-      id: 'Linha Pesada',
-      defaultImage: 'https://img.usecurling.com/p/800/600?q=heavy%20industry&color=red',
-    },
-  ]
-
-  const handleUpload = async (lineId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(lineId)
-    try {
-      const ext = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
-      const { error } = await supabase.storage.from('images').upload(fileName, file)
-      if (error) throw error
-      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
-      await setContent(`hero_img_line_${lineId}`, data.publicUrl, 'image')
-      toast.success(`Imagem da ${lineId} atualizada!`)
-    } catch (error) {
-      toast.error('Erro ao enviar imagem')
-    } finally {
-      setUploading(null)
-    }
-  }
-
-  const lineImages = galleryForLine
-    ? Array.from(
-        new Set(
-          products
-            .filter((p) => p.group === group && p.line === galleryForLine)
-            .flatMap((p) => p.images || []),
-        ),
-      )
-    : []
-
-  return (
-    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 flex-1 flex flex-col gap-8 pb-20 animate-fade-in-up">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSelectedGroup(null)}
-          className="rounded-full shrink-0"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h2 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
-          {group} - Selecione a Linha
-        </h2>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-        {lines.map((line) => {
-          const heroKey = `hero_img_line_${line.id}`
-          const displayImage = content[heroKey] || line.defaultImage
-
-          return (
-            <div
-              key={line.id}
-              className="relative h-72 md:h-96 rounded-3xl overflow-hidden cursor-pointer group/card shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
-              onClick={() => onNavigate(line.id)}
-            >
-              <img
-                src={displayImage}
-                alt={line.id}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
-              />
-
-              {editMode && (
-                <div
-                  className="absolute top-4 right-4 z-30 flex gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl border-white/10 h-10 w-10 rounded-md"
-                    onClick={() => setGalleryForLine(line.id)}
-                    title={`Escolher da Galeria para ${line.id}`}
-                  >
-                    <Images className="w-5 h-5" />
-                  </Button>
-                  <label className="cursor-pointer">
-                    <div
-                      className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl border border-white/10 h-10 w-10 rounded-md flex items-center justify-center transition-colors"
-                      title={`Upload Imagem para ${line.id}`}
-                    >
-                      {uploading === line.id ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <ImagePlus className="w-5 h-5" />
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => handleUpload(line.id, e)}
-                    />
-                  </label>
-                </div>
-              )}
-
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent group-hover/card:via-black/50 transition-colors flex flex-col justify-end p-8 pointer-events-none z-10">
-                <h3 className="text-white text-3xl font-bold drop-shadow-lg mb-2">{line.id}</h3>
-                <div className="flex items-center text-white/80 font-medium text-sm group-hover/card:text-white transition-colors">
-                  Ver produtos <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {editMode && (
-        <Dialog open={!!galleryForLine} onOpenChange={(open) => !open && setGalleryForLine(null)}>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Selecionar Imagem Hero para {galleryForLine}</DialogTitle>
-              <DialogDescription>
-                Escolha uma imagem de produto cadastrado nesta linha para servir como capa.
-              </DialogDescription>
-            </DialogHeader>
-            {lineImages.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Nenhuma imagem de produto encontrada nesta linha.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                {lineImages.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className="relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary/50 transition-all group/gal"
-                    onClick={() => {
-                      if (galleryForLine) {
-                        setContent(`hero_img_line_${galleryForLine}`, img, 'image')
-                        setGalleryForLine(null)
-                        toast.success('Imagem hero da linha atualizada com sucesso!')
-                      }
-                    }}
-                  >
-                    <img
-                      src={img}
-                      alt={`Opção ${idx}`}
-                      className="w-full h-full object-cover transition-transform group-hover/gal:scale-105"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      )}
-
-      <div className="flex justify-center mt-4">
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={() => onNavigate('ALL')}
-          className="rounded-full px-8"
-        >
-          Ver todos os produtos de {group}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-export default function CatalogPage() {
-  const {
-    products,
-    selectedGroup,
-    selectedLine,
-    searchQuery,
-    filteredProducts,
-    editMode,
-    setSearchQuery,
-    setSelectedGroup,
-    setSelectedLine,
-    addProduct,
-  } = useCatalogStore()
-
-  const activeGroupInfo = GROUPS.find((g) => g.id === selectedGroup)
-  const activeGroupLines = useMemo(() => {
-    if (!selectedGroup) return []
-    const lines = new Set<string>()
-    if (activeGroupInfo?.hasLines) {
-      LINES.forEach((l) => lines.add(l))
-    }
-    products.forEach((p) => {
-      if (p.group === selectedGroup && p.line) lines.add(p.line)
-    })
-    return Array.from(lines).sort((a, b) => a.localeCompare(b))
-  }, [selectedGroup, activeGroupInfo, products])
-
-  if (!selectedGroup && !searchQuery) {
-    return <HomeHeroView />
-  }
-
-  if (selectedGroup && !searchQuery && !selectedLine && activeGroupInfo?.hasLines) {
-    return <LineSelectionView group={selectedGroup} onNavigate={(l) => setSelectedLine(l)} />
-  }
-
-  const handleAddProduct = () => {
-    const newId = `prod_${Date.now()}`
-    addProduct({
-      id: newId,
-      name: 'Novo Produto',
-      code: `CP-${Math.floor(Math.random() * 900) + 100}`,
-      group: selectedGroup || 'Bancadas',
-      line: selectedLine || null,
-      images: ['https://img.usecurling.com/p/600/400?q=box&color=gray'],
-      specs: {
-        Material: 'Definir',
-        Dimensões: '0x0x0mm',
-        Capacidade: '0kg',
-        Acabamento: 'Definir',
-      },
-      complementary: 'Informações adicionais do produto.',
-    })
-    toast.success('Novo produto adicionado!')
-  }
+function GlobalSearchResults() {
+  const { searchQuery, setSearchQuery, filteredProducts } = useCatalogStore()
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 flex-1 flex flex-col">
-      {editMode && (
-        <div className="bg-primary/10 border-l-4 border-primary text-primary px-5 py-4 rounded-r-md mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm animate-fade-in-down gap-4">
-          <div>
-            <h2 className="font-bold text-lg flex items-center gap-2">Modo Edição Ativo</h2>
-            <p className="text-sm opacity-80">
-              Gerencie os produtos da categoria atual. Clique nos textos ou ícones para editar.
-            </p>
-          </div>
-          <Button onClick={handleAddProduct} className="shadow-sm shrink-0">
-            <PlusCircle className="w-4 h-4 mr-2" /> Adicionar Produto
-          </Button>
-        </div>
-      )}
-
       <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white p-3 px-4 rounded-lg shadow-sm border gap-4">
-        <div className="text-sm flex items-center flex-wrap gap-2 text-muted-foreground w-full sm:w-auto">
+        <div className="text-sm flex items-center gap-2 text-muted-foreground w-full sm:w-auto">
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 mr-2 rounded-full shrink-0"
-            onClick={() => {
-              if (searchQuery) {
-                setSearchQuery('')
-              } else if (
-                activeGroupInfo?.hasLines &&
-                selectedLine !== null &&
-                selectedLine !== 'ALL'
-              ) {
-                setSelectedLine(null)
-              } else {
-                setSelectedGroup(null)
-                setSelectedLine(null)
-              }
-            }}
-            title="Voltar"
+            onClick={() => setSearchQuery('')}
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-
-          {searchQuery ? (
-            <>
-              <span>Busca global</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
-              <span className="font-semibold text-primary">"{searchQuery}"</span>
-            </>
-          ) : (
-            <>
-              <span className="font-medium text-foreground text-lg">{selectedGroup}</span>
-              {activeGroupLines.length > 0 && (
-                <div className="flex gap-1 ml-2 flex-wrap">
-                  <Button
-                    variant={
-                      selectedLine === 'ALL' || selectedLine === null ? 'secondary' : 'ghost'
-                    }
-                    size="sm"
-                    className="h-7 text-xs rounded-full"
-                    onClick={() => setSelectedLine('ALL')}
-                  >
-                    Todas as Linhas
-                  </Button>
-                  {activeGroupLines.map((l) => (
-                    <Button
-                      key={l}
-                      variant={selectedLine === l ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="h-7 text-xs rounded-full"
-                      onClick={() => setSelectedLine(l)}
-                    >
-                      {l}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+          <span>Busca global</span>
+          <span className="font-semibold text-primary">"{searchQuery}"</span>
         </div>
         <span className="text-xs font-medium bg-muted px-3 py-1.5 rounded-full text-foreground/80 whitespace-nowrap">
           {filteredProducts.length} itens encontrados
@@ -763,7 +102,7 @@ export default function CatalogPage() {
             </div>
             <h3 className="text-xl font-bold text-foreground mb-2">Nenhum produto encontrado</h3>
             <p className="text-muted-foreground">
-              Não encontramos itens que correspondam aos filtros selecionados ou à sua busca.
+              Não encontramos itens que correspondam à sua busca.
             </p>
           </div>
         </div>
@@ -773,7 +112,7 @@ export default function CatalogPage() {
             <div
               key={p.id}
               className="animate-fade-in-up h-full"
-              style={{ animationDelay: `${Math.min(i * 50, 500)}ms`, animationFillMode: 'both' }}
+              style={{ animationDelay: `${Math.min(i * 50, 500)}ms` }}
             >
               <ProductCard product={p} />
             </div>
@@ -782,4 +121,12 @@ export default function CatalogPage() {
       )}
     </div>
   )
+}
+
+export default function CatalogPage() {
+  const { selectedGroup, searchQuery } = useCatalogStore()
+
+  if (searchQuery) return <GlobalSearchResults />
+  if (selectedGroup) return <GroupProductsView />
+  return <HomeHeroView />
 }

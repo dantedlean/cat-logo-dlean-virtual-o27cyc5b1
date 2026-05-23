@@ -1,7 +1,8 @@
 import { useSyncExternalStore, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 
-type CmsContent = Record<string, string>
+export type CmsItem = { value: string; metadata: any }
+type CmsContent = Record<string, CmsItem>
 
 let content: CmsContent = {}
 let loaded = false
@@ -16,10 +17,10 @@ function getSnapshot() {
   return content
 }
 
-async function setContent(id: string, value: string, type: string) {
-  content = { ...content, [id]: value }
+async function setContent(id: string, value: string, type: string, metadata: any = {}) {
+  content = { ...content, [id]: { value, metadata } }
   listeners.forEach((l) => l())
-  await supabase.from('site_content').upsert({ id, value, type })
+  await supabase.from('site_content').upsert({ id, value, type, metadata })
 }
 
 let loadingPromise: Promise<void> | null = null
@@ -32,9 +33,9 @@ async function loadContent() {
       .select('*')
       .then(({ data }) => {
         if (data) {
-          const newContent: Record<string, string> = {}
+          const newContent: CmsContent = {}
           data.forEach((item) => {
-            newContent[item.id] = item.value
+            newContent[item.id] = { value: item.value, metadata: item.metadata || {} }
           })
           content = newContent
           loaded = true

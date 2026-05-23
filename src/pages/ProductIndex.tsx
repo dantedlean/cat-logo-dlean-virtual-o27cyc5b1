@@ -83,7 +83,7 @@ export default function ProductIndexPage() {
                     className="cursor-pointer transition-colors hover:bg-muted/50 group"
                     onClick={() => {
                       setSelectedGroup(p.group)
-                      if (p.line) setSelectedLine(p.line)
+                      setSelectedLine(null)
                       setSearchQuery(p.code) // Quick jump to it via search
                       navigate('/')
                     }}

@@ -22,7 +22,7 @@ export function Navigation() {
               variant={selectedGroup === g.id ? 'default' : 'ghost'}
               onClick={() => {
                 setSelectedGroup(g.id)
-                setSelectedLine(g.hasLines ? 'Linha Leve' : null)
+                setSelectedLine(null)
               }}
               className={`rounded-full px-5 font-medium transition-colors ${selectedGroup === g.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
@@ -32,24 +32,6 @@ export function Navigation() {
         </div>
         <ScrollBar orientation="horizontal" className="invisible" />
       </ScrollArea>
-
-      {/* Level 2: Lines */}
-      {activeGroup?.hasLines && (
-        <ScrollArea className="w-full whitespace-nowrap bg-muted/40">
-          <div className="flex w-max space-x-6 p-0 px-8 text-sm">
-            {LINES.map((l) => (
-              <button
-                key={l}
-                className={`py-3 border-b-2 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm ${selectedLine === l ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'}`}
-                onClick={() => setSelectedLine(l)}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" className="invisible" />
-        </ScrollArea>
-      )}
     </div>
   )
 }

@@ -54,7 +54,7 @@ export function Header() {
 
   const activeGroup = GROUPS.find((g) => g.id === selectedGroup)
   const logoUrl =
-    content['logo'] ||
+    content['logo']?.value ||
     'https://skip-prod-storage.s3.amazonaws.com/attachments/1740058564030_download.png'
 
   const handleActivateEdit = async () => {
@@ -109,7 +109,7 @@ export function Header() {
       const { error } = await supabase.storage.from('images').upload(fileName, file)
       if (error) throw error
       const { data } = supabase.storage.from('images').getPublicUrl(fileName)
-      await setContent('logo', data.publicUrl, 'logo')
+      await setContent('logo', data.publicUrl, 'logo', {})
       toast.success('Logo atualizado!')
     } catch (error) {
       toast.error('Erro ao atualizar logo')
@@ -160,7 +160,7 @@ export function Header() {
                     className="justify-start font-medium"
                     onClick={() => {
                       setSelectedGroup(g.id)
-                      setSelectedLine(g.hasLines ? 'Linha Leve' : null)
+                      setSelectedLine(null)
                       setSearchQuery('')
                     }}
                   >
@@ -168,25 +168,7 @@ export function Header() {
                   </Button>
                 ))}
               </div>
-              {activeGroup?.hasLines && !searchQuery && (
-                <>
-                  <div className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
-                    Linhas
-                  </div>
-                  <div className="grid gap-1">
-                    {LINES.map((l) => (
-                      <Button
-                        key={l}
-                        variant={selectedLine === l ? 'secondary' : 'ghost'}
-                        className="justify-start font-medium"
-                        onClick={() => setSelectedLine(l)}
-                      >
-                        {l}
-                      </Button>
-                    ))}
-                  </div>
-                </>
-              )}
+
               <div className="mt-8 border-t pt-4">
                 <Link
                   to="/index"
@@ -251,7 +233,7 @@ export function Header() {
                   key={g.id}
                   onClick={() => {
                     setSelectedGroup(g.id)
-                    setSelectedLine(g.hasLines ? 'Linha Leve' : null)
+                    setSelectedLine(null)
                     setSearchQuery('')
                   }}
                   className="cursor-pointer"
