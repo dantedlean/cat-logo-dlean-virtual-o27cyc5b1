@@ -6,13 +6,11 @@ import { GROUPS, LINES } from '@/lib/constants'
 export function Navigation() {
   const { selectedGroup, setSelectedGroup, selectedLine, setSelectedLine, searchQuery } =
     useCatalogStore()
-  const activeGroup = GROUPS.find((g) => g.id === selectedGroup)
 
   if (searchQuery) return null // Hide navigation during global search
-  if (!selectedGroup) return null // Hide on Home page since Header has menu
 
   return (
-    <div className="sticky top-16 z-40 bg-background border-b shadow-sm hidden md:block transition-all">
+    <div className="sticky top-16 z-40 bg-background border-b shadow-sm transition-all">
       {/* Level 1: Groups */}
       <ScrollArea className="w-full whitespace-nowrap border-b border-muted">
         <div className="flex w-max space-x-1 p-2 px-6">
