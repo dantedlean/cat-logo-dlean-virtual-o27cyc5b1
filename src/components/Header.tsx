@@ -88,8 +88,12 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="bg-background text-foreground w-[280px]">
-              <div className="font-bold text-lg mb-6 tracking-tight text-primary">
-                D-Lean Solutions
+              <div className="mb-6">
+                <img
+                  src="https://skip-prod-storage.s3.amazonaws.com/attachments/1740058564030_download.png"
+                  alt="D-Lean Solutions"
+                  className="h-8 w-auto object-contain"
+                />
               </div>
               <div className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                 Grupos
@@ -142,9 +146,13 @@ export function Header() {
         </div>
         <Link
           to="/"
-          className="font-bold text-lg md:text-xl tracking-tight hidden sm:block whitespace-nowrap"
+          className="hidden sm:flex items-center gap-2 transition-transform hover:scale-[1.02]"
         >
-          D-Lean Solutions
+          <img
+            src="https://skip-prod-storage.s3.amazonaws.com/attachments/1740058564030_download.png"
+            alt="D-Lean Solutions"
+            className="h-10 w-auto object-contain"
+          />
         </Link>
       </div>
 

@@ -17,6 +17,7 @@ export const GROUPS = [
   { id: 'Esteiras', label: 'Esteiras', hasLines: true },
   { id: 'Gestão Visual', label: 'Gestão Visual', hasLines: false },
   { id: 'Karakuri & Sistemas', label: 'Karakuri & Sistemas', hasLines: false },
+  { id: 'Outras Soluções', label: 'Outras Soluções', hasLines: false },
 ]
 
 export const LINES = ['Linha Leve', 'Linha Média', 'Linha Pesada']

@@ -1,8 +1,16 @@
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Header } from './Header'
 import { Navigation } from './Navigation'
+import { useCms } from '@/stores/use-cms-store'
 
 export default function Layout() {
+  const { loadContent } = useCms()
+
+  useEffect(() => {
+    loadContent()
+  }, [loadContent])
+
   return (
     <div className="flex flex-col min-h-screen bg-muted/20 font-sans text-foreground selection:bg-primary/20">
       <Header />

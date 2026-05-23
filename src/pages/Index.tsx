@@ -3,10 +3,8 @@ import {
   PlusCircle,
   Search,
   ArrowLeft,
-  ArrowRight,
   ImagePlus,
   Loader2,
-  Trash,
   Images,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -27,246 +25,160 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 
-function HomeHeroCarousel() {
-  const { editMode, products } = useCatalogStore()
-  const { content, setContent } = useCms()
-
-  const [api, setApi] = useState<CarouselApi>()
-  const [isHovered, setIsHovered] = useState(false)
-
+function UploadHeroButton({ group, currentImage }: { group: string; currentImage: string }) {
+  const { setContent } = useCms()
   const [uploading, setUploading] = useState(false)
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (!api) return
-
-    const timer = setInterval(() => {
-      if (!isHovered && api && !document.hidden) {
-        try {
-          const engine =
-            typeof (api as any).internalEngine === 'function' ? (api as any).internalEngine() : null
-          if (engine !== undefined) {
-            api.scrollNext()
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-    }, 5000)
-
-    return () => clearInterval(timer)
-  }, [api, isHovered])
-
-  const allProductImages = Array.from(new Set(products.flatMap((p) => p.images || [])))
-
-  const rawHeroData = content['home_hero']
-  let heroImages: string[] = []
-  try {
-    heroImages = rawHeroData ? JSON.parse(rawHeroData) : []
-  } catch {
-    /* intentionally ignored */
-  }
-
-  if (heroImages.length === 0 && !editMode) {
-    return null
-  }
-
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
+    const file = e.target.files?.[0]
+    if (!file) return
     setUploading(true)
-
-    let newImageUrls: string[] = []
-
-    for (const file of files) {
-      try {
-        const ext = file.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
-        const { error } = await supabase.storage.from('images').upload(fileName, file)
-        if (error) throw error
-        const { data } = supabase.storage.from('images').getPublicUrl(fileName)
-        newImageUrls.push(data.publicUrl)
-      } catch (error) {
-        toast.error('Erro ao enviar imagem')
-      }
-    }
-
-    if (newImageUrls.length > 0) {
-      const updatedImages = [...heroImages, ...newImageUrls]
-      await setContent('home_hero', JSON.stringify(updatedImages), 'text')
-      toast.success('Imagem(ns) hero adicionada(s)!')
-    }
-
-    setUploading(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  const addFromGallery = async (imgUrl: string) => {
-    const updatedImages = [...heroImages, imgUrl]
-    await setContent('home_hero', JSON.stringify(updatedImages), 'text')
-    toast.success('Imagem hero adicionada com sucesso!')
-    setIsGalleryOpen(false)
-  }
-
-  const removeImage = async (idxToRemove: number) => {
-    const imgUrl = heroImages[idxToRemove]
-    const updatedImages = heroImages.filter((_, i) => i !== idxToRemove)
-    await setContent('home_hero', JSON.stringify(updatedImages), 'text')
-
     try {
-      if (imgUrl.includes('/storage/v1/object/public/images/')) {
-        const fileName = imgUrl.split('/').pop()
-        if (fileName) {
-          await supabase.storage.from('images').remove([fileName])
-        }
-      }
-    } catch (e) {
-      // ignore
+      const ext = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`
+      const { error } = await supabase.storage.from('images').upload(fileName, file)
+      if (error) throw error
+      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
+      await setContent(`hero_img_group_${group}`, data.publicUrl, 'hero_banner')
+      toast.success('Imagem hero atualizada!')
+    } catch (error) {
+      toast.error('Erro ao enviar imagem')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
-  }
-
-  const moveImage = async (idx: number, dir: number) => {
-    const updatedImages = [...heroImages]
-    const temp = updatedImages[idx]
-    updatedImages[idx] = updatedImages[idx + dir]
-    updatedImages[idx + dir] = temp
-    await setContent('home_hero', JSON.stringify(updatedImages), 'text')
   }
 
   return (
-    <div className="w-full relative mb-10 group/hero">
-      {heroImages.length > 0 ? (
-        <Carousel
-          setApi={setApi}
-          opts={{ loop: true }}
-          className="w-full h-[300px] md:h-[400px] lg:h-[500px] rounded-3xl overflow-hidden shadow-lg"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          <CarouselContent className="h-full">
-            {heroImages.map((img, idx) => (
-              <CarouselItem key={idx} className="h-full relative">
-                <img src={img} alt={`Hero ${idx}`} className="w-full h-full object-cover" />
+    <div className="flex gap-2">
+      <label className="cursor-pointer">
+        <div className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl h-10 px-4 rounded-md flex items-center justify-center transition-colors font-semibold border border-white/10 gap-2">
+          {uploading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <ImagePlus className="w-4 h-4" />
+          )}
+          Alterar Imagem Capa
+        </div>
+        <input
+          type="file"
+          className="hidden"
+          accept="image/*"
+          onChange={handleUpload}
+          ref={fileInputRef}
+        />
+      </label>
+    </div>
+  )
+}
 
-                {editMode && (
-                  <div className="absolute top-4 left-4 flex gap-2 z-30 bg-zinc-900/90 p-2 rounded-xl backdrop-blur-md shadow-xl border border-white/10">
+function FamilyHeroCarousel() {
+  const { editMode, setSelectedGroup, setSelectedLine } = useCatalogStore()
+  const { content } = useCms()
+  const [api, setApi] = useState<CarouselApi>()
+  const [isHovered, setIsHovered] = useState(false)
+  const [current, setCurrent] = useState(0)
+
+  const handleNav = (group: string) => {
+    setSelectedGroup(group)
+    setSelectedLine(null)
+  }
+
+  useEffect(() => {
+    if (!api) return
+    setCurrent(api.selectedScrollSnap())
+    api.on('select', () => {
+      setCurrent(api.selectedScrollSnap())
+    })
+  }, [api])
+
+  useEffect(() => {
+    if (!api) return
+    const timer = setInterval(() => {
+      if (!isHovered && !document.hidden && api) {
+        if (typeof api.scrollNext === 'function') {
+          api.scrollNext()
+        }
+      }
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [api, isHovered])
+
+  return (
+    <div className="w-[100vw] relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] group/hero bg-black mb-10 shadow-xl border-b border-border">
+      <Carousel
+        setApi={setApi}
+        opts={{ loop: true }}
+        className="w-full h-[350px] md:h-[500px] lg:h-[600px] overflow-hidden"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <CarouselContent className="h-full">
+          {GROUPS.map((group, idx) => {
+            const heroKey = `hero_img_group_${group.id}`
+            const defaultColors = [
+              'blue',
+              'gray',
+              'green',
+              'orange',
+              'red',
+              'black',
+              'white',
+              'yellow',
+            ]
+            const heroImage =
+              content[heroKey] ||
+              `https://img.usecurling.com/p/1600/900?q=industry&color=${defaultColors[idx % defaultColors.length]}`
+
+            return (
+              <CarouselItem
+                key={group.id}
+                className="h-full relative cursor-pointer flex-[0_0_100%] min-w-0"
+                onClick={() => handleNav(group.id)}
+              >
+                <img
+                  src={heroImage}
+                  alt={group.label}
+                  className="w-full h-full object-cover opacity-80 transition-opacity duration-500 hover:opacity-100"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-8 md:p-20 pb-16 md:pb-24">
+                  <div className="max-w-[1600px] mx-auto w-full px-4 md:px-8">
+                    <h2 className="text-white text-4xl md:text-6xl font-extrabold drop-shadow-2xl">
+                      {group.label}
+                    </h2>
+                    <p className="text-white/90 text-lg md:text-2xl mt-4 font-medium drop-shadow-lg max-w-2xl">
+                      Descubra nossa linha completa e de alta performance de{' '}
+                      {group.label.toLowerCase()}.
+                    </p>
                     <Button
-                      size="icon"
-                      variant="destructive"
-                      className="h-10 w-10 shadow-sm bg-red-600 hover:bg-red-700"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeImage(idx)
-                      }}
+                      variant="default"
+                      size="lg"
+                      className="mt-8 shadow-xl text-lg px-8 rounded-full pointer-events-none"
                     >
-                      <Trash className="w-5 h-5 text-white" />
+                      Explorar {group.label}
                     </Button>
-                    {idx > 0 && (
-                      <Button
-                        size="icon"
-                        className="h-10 w-10 shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          moveImage(idx, -1)
-                        }}
-                      >
-                        <ArrowLeft className="w-5 h-5" />
-                      </Button>
-                    )}
-                    {idx < heroImages.length - 1 && (
-                      <Button
-                        size="icon"
-                        className="h-10 w-10 shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          moveImage(idx, 1)
-                        }}
-                      >
-                        <ArrowRight className="w-5 h-5" />
-                      </Button>
-                    )}
+                  </div>
+                </div>
+                {editMode && (
+                  <div className="absolute top-4 right-4 z-40" onClick={(e) => e.stopPropagation()}>
+                    <UploadHeroButton group={group.id} currentImage={heroImage} />
                   </div>
                 )}
               </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-      ) : (
-        <div className="w-full h-[300px] md:h-[400px] rounded-3xl bg-muted border-2 border-dashed flex items-center justify-center text-muted-foreground shadow-sm">
-          Nenhuma imagem de destaque cadastrada.
-        </div>
-      )}
+            )
+          })}
+        </CarouselContent>
+      </Carousel>
 
-      {editMode && (
-        <>
-          <div className="absolute top-4 right-4 z-40 flex gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="shadow-xl flex items-center gap-2 font-bold bg-zinc-900 hover:bg-zinc-800 text-white border-0"
-              onClick={() => setIsGalleryOpen(true)}
-              title="Escolher imagem do catálogo"
-            >
-              <Images className="w-4 h-4" />
-              Galeria
-            </Button>
-            <Button
-              size="sm"
-              className="shadow-xl flex items-center gap-2 font-bold bg-zinc-900 hover:bg-zinc-800 text-white border-0"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ImagePlus className="w-4 h-4" />
-              )}
-              Upload
-            </Button>
-            <input
-              type="file"
-              multiple
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleUpload}
-            />
-          </div>
-
-          <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Selecionar Imagem Hero para a Página Inicial</DialogTitle>
-                <DialogDescription>
-                  Escolha uma imagem do catálogo de produtos para adicionar ao carrossel principal.
-                </DialogDescription>
-              </DialogHeader>
-              {allProductImages.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Nenhuma imagem de produto encontrada no catálogo.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
-                  {allProductImages.map((img, idx) => (
-                    <div
-                      key={idx}
-                      className="relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary/50 group/gal"
-                      onClick={() => addFromGallery(img)}
-                    >
-                      <img
-                        src={img}
-                        alt={`Opção ${idx}`}
-                        className="w-full h-full object-cover transition-transform group-hover/gal:scale-105"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-        </>
-      )}
+      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-20 pointer-events-none">
+        {GROUPS.map((_, idx) => (
+          <div
+            key={idx}
+            className={`w-2.5 h-2.5 rounded-full shadow-sm transition-all duration-300 ${current === idx ? 'bg-primary scale-125' : 'bg-white/50'}`}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -285,6 +197,10 @@ function GroupCard({
   const [api, setApi] = useState<CarouselApi>()
   const [isHovered, setIsHovered] = useState(false)
   const { editMode } = useCatalogStore()
+  const { content, setContent } = useCms()
+  const [uploading, setUploading] = useState(false)
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!api) return
@@ -293,11 +209,7 @@ function GroupCard({
       () => {
         if (!isHovered && api && !document.hidden) {
           try {
-            const engine =
-              typeof (api as any).internalEngine === 'function'
-                ? (api as any).internalEngine()
-                : null
-            if (engine !== undefined) {
+            if (typeof api.scrollNext === 'function') {
               api.scrollNext()
             }
           } catch (e) {
@@ -310,10 +222,6 @@ function GroupCard({
 
     return () => clearInterval(timer)
   }, [api, isHovered, index])
-  const { content, setContent } = useCms()
-  const [uploading, setUploading] = useState(false)
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const heroKey = `hero_img_group_${group}`
   const heroImage = content[heroKey]
@@ -324,7 +232,7 @@ function GroupCard({
     : allImages.length > 0
       ? allImages.slice(0, 5)
       : [
-          `https://img.usecurling.com/p/800/800?q=industry&color=${['blue', 'gray', 'green', 'orange', 'red'][index % 5]}`,
+          `https://img.usecurling.com/p/800/800?q=industry&color=${['blue', 'gray', 'green', 'orange', 'red', 'black', 'white', 'yellow'][index % 8] || 'black'}`,
         ]
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -337,7 +245,7 @@ function GroupCard({
       const { error } = await supabase.storage.from('images').upload(fileName, file)
       if (error) throw error
       const { data } = supabase.storage.from('images').getPublicUrl(fileName)
-      await setContent(heroKey, data.publicUrl, 'image')
+      await setContent(heroKey, data.publicUrl, 'hero_banner')
       toast.success('Imagem hero atualizada!')
     } catch (error) {
       toast.error('Erro ao enviar imagem')
@@ -381,21 +289,21 @@ function GroupCard({
             <Button
               size="icon"
               variant="secondary"
-              className="bg-zinc-900 hover:bg-zinc-800 text-white shadow-md border-0 h-9 w-9 rounded-md"
+              className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl border-white/10 h-10 w-10 rounded-md"
               onClick={() => setIsGalleryOpen(true)}
               title="Escolher da Galeria"
             >
-              <Images className="w-4 h-4" />
+              <Images className="w-5 h-5" />
             </Button>
             <label className="cursor-pointer">
               <div
-                className="bg-zinc-900 hover:bg-zinc-800 text-white shadow-md h-9 w-9 rounded-md flex items-center justify-center transition-colors"
+                className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl border border-white/10 h-10 w-10 rounded-md flex items-center justify-center transition-colors"
                 title="Upload Imagem Hero"
               >
                 {uploading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  <ImagePlus className="w-4 h-4" />
+                  <ImagePlus className="w-5 h-5" />
                 )}
               </div>
               <input type="file" className="hidden" accept="image/*" onChange={handleUpload} />
@@ -432,7 +340,7 @@ function GroupCard({
                     key={idx}
                     className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all group/gal ${heroImage === img ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-transparent hover:border-primary/50'}`}
                     onClick={() => {
-                      setContent(heroKey, img, 'image')
+                      setContent(heroKey, img, 'hero_banner')
                       setIsGalleryOpen(false)
                       toast.success('Imagem hero atualizada com sucesso!')
                     }}
@@ -475,13 +383,14 @@ function HomeHeroView() {
   }
 
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 flex-1 flex flex-col gap-14 pb-20">
-      <section className="animate-fade-in-up w-full">
-        <HomeHeroCarousel />
+    <div className="flex-1 flex flex-col w-full pb-20 overflow-x-hidden">
+      <section className="animate-fade-in-down w-full">
+        <FamilyHeroCarousel />
       </section>
 
-      <section className="animate-fade-in-up">
-        <h2 className="text-3xl md:text-4xl font-extrabold mb-8 text-foreground tracking-tight">
+      <section className="animate-fade-in-up mt-10">
+        <h2 className="text-3xl md:text-4xl font-extrabold mb-8 text-foreground tracking-tight flex items-center gap-3">
+          <div className="w-2 h-8 bg-primary rounded-full hidden sm:block"></div>
           <CmsText id="hero_title_main" defaultText="Nossas Famílias de Produtos" />
         </h2>
 
@@ -553,7 +462,6 @@ function LineSelectionView({
     }
   }
 
-  // Get images specific to the selected line modal
   const lineImages = galleryForLine
     ? Array.from(
         new Set(
@@ -605,21 +513,21 @@ function LineSelectionView({
                   <Button
                     size="icon"
                     variant="secondary"
-                    className="bg-zinc-900 hover:bg-zinc-800 text-white shadow-md border-0 h-9 w-9 rounded-md"
+                    className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl border-white/10 h-10 w-10 rounded-md"
                     onClick={() => setGalleryForLine(line.id)}
                     title={`Escolher da Galeria para ${line.id}`}
                   >
-                    <Images className="w-4 h-4" />
+                    <Images className="w-5 h-5" />
                   </Button>
                   <label className="cursor-pointer">
                     <div
-                      className="bg-zinc-900 hover:bg-zinc-800 text-white shadow-md h-9 w-9 rounded-md flex items-center justify-center transition-colors"
+                      className="bg-zinc-900/90 hover:bg-zinc-800 text-white shadow-xl border border-white/10 h-10 w-10 rounded-md flex items-center justify-center transition-colors"
                       title={`Upload Imagem para ${line.id}`}
                     >
                       {uploading === line.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
-                        <ImagePlus className="w-4 h-4" />
+                        <ImagePlus className="w-5 h-5" />
                       )}
                     </div>
                     <input
