@@ -1,18 +1,35 @@
-import { useMemo } from 'react'
-import { ArrowLeft, Search, PlusCircle } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowLeft, Search, PlusCircle, ImagePlus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProductCard } from '@/components/ProductCard'
 import useCatalogStore from '@/stores/use-catalog-store'
+import { useCms } from '@/stores/use-cms-store'
 import { GROUPS, LINES } from '@/lib/constants'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase/client'
 
 export function GroupProductsView() {
-  const { products, selectedGroup, editMode, addProduct, setFilters } = useCatalogStore()
+  const {
+    products,
+    selectedGroup,
+    selectedLine,
+    setSelectedLine,
+    editMode,
+    addProduct,
+    setFilters,
+  } = useCatalogStore()
+  const { content, setContent } = useCms()
   const activeGroupInfo = GROUPS.find((g) => g.id === selectedGroup)
+  const [uploadingLine, setUploadingLine] = useState<string | null>(null)
 
   const groupProducts = useMemo(
     () => products.filter((p) => p.group === selectedGroup),
     [products, selectedGroup],
+  )
+
+  const lineProducts = useMemo(
+    () => groupProducts.filter((p) => p.line === selectedLine),
+    [groupProducts, selectedLine],
   )
 
   if (!activeGroupInfo) return null
@@ -32,19 +49,110 @@ export function GroupProductsView() {
     toast.success('Novo produto adicionado!')
   }
 
+  const handleImageUpload = async (line: string, file: File) => {
+    setUploadingLine(line)
+    try {
+      const ext = file.name.split('.').pop()
+      const fileName = `line-${line.replace(/\s+/g, '').toLowerCase()}-${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('images').upload(fileName, file)
+      if (error) throw error
+      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
+      await setContent(`line_img_${line}`, data.publicUrl, 'image', {})
+      toast.success('Imagem da linha atualizada!')
+    } catch (err) {
+      toast.error('Erro ao fazer upload da imagem.')
+    } finally {
+      setUploadingLine(null)
+    }
+  }
+
+  // Level 2: Bridge (Select Line)
+  if (activeGroupInfo.hasLines && !selectedLine) {
+    return (
+      <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 flex-1 flex flex-col gap-8 pb-20 animate-fade-in-up">
+        <div className="flex items-center gap-4 border-b pb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setFilters(null, null, '')}
+            className="rounded-full shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
+            {selectedGroup} - Selecione uma Linha
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
+          {LINES.map((line, idx) => {
+            const lineImg =
+              content[`line_img_${line}`]?.value ||
+              `https://img.usecurling.com/p/800/600?q=${encodeURIComponent(line)}&color=gray`
+            return (
+              <div
+                key={line}
+                className="relative h-64 md:h-80 lg:h-96 rounded-3xl overflow-hidden cursor-pointer group/card shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-muted flex items-center justify-center animate-fade-in-up"
+                style={{ animationDelay: `${idx * 100}ms` }}
+                onClick={() => setSelectedLine(line)}
+              >
+                <img
+                  src={lineImg}
+                  alt={line}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover/card:via-black/50 transition-colors z-0" />
+                <h3 className="text-white text-3xl md:text-4xl font-bold drop-shadow-xl z-10 text-center px-4">
+                  {line}
+                </h3>
+
+                {editMode && (
+                  <label
+                    className="absolute top-4 right-4 bg-black/80 p-3 rounded-full cursor-pointer opacity-0 group-hover/card:opacity-100 transition-opacity z-20 hover:bg-black"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {uploadingLine === line ? (
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    ) : (
+                      <ImagePlus className="w-6 h-6 text-white" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleImageUpload(line, file)
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // Level 3: Products Grid
+  const productsToDisplay = activeGroupInfo.hasLines ? lineProducts : groupProducts
+
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 flex-1 flex flex-col gap-8 pb-20 animate-fade-in-up">
       <div className="flex items-center gap-4 border-b pb-4">
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setFilters(null, null, '')}
+          onClick={() =>
+            activeGroupInfo.hasLines ? setSelectedLine(null) : setFilters(null, null, '')
+          }
           className="rounded-full shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h2 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
-          {selectedGroup}
+          {selectedGroup} {activeGroupInfo.hasLines && selectedLine ? `- ${selectedLine}` : ''}
         </h2>
       </div>
 
@@ -53,19 +161,20 @@ export function GroupProductsView() {
           <div>
             <h2 className="font-bold text-lg flex items-center gap-2">Modo Edição Ativo</h2>
             <p className="text-sm opacity-80">
-              Gerencie os produtos da categoria {selectedGroup}. Clique em adicionar para inserir
-              novos itens.
+              Gerencie os produtos da categoria {selectedGroup}{' '}
+              {selectedLine ? `(${selectedLine})` : ''}.
             </p>
           </div>
-          {!activeGroupInfo.hasLines && (
-            <Button onClick={() => handleAddProduct(null)} className="shadow-sm shrink-0">
-              <PlusCircle className="w-4 h-4 mr-2" /> Adicionar Produto
-            </Button>
-          )}
+          <Button
+            onClick={() => handleAddProduct(activeGroupInfo.hasLines ? selectedLine : null)}
+            className="shadow-sm shrink-0"
+          >
+            <PlusCircle className="w-4 h-4 mr-2" /> Adicionar Produto
+          </Button>
         </div>
       )}
 
-      {groupProducts.length === 0 && !editMode && (
+      {productsToDisplay.length === 0 && !editMode && (
         <div className="flex-1 flex flex-col items-center justify-center text-center py-20 px-4">
           <div className="bg-white p-8 rounded-3xl shadow-sm border max-w-md w-full">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -79,44 +188,11 @@ export function GroupProductsView() {
         </div>
       )}
 
-      {activeGroupInfo.hasLines ? (
-        <div className="flex flex-col gap-12">
-          {LINES.map((line) => {
-            const lineProducts = groupProducts.filter((p) => p.line === line)
-            if (!editMode && lineProducts.length === 0) return null
-
-            return (
-              <div key={line} className="flex flex-col gap-4 animate-fade-in-up">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-2xl font-bold text-foreground">{line}</h3>
-                  {editMode && (
-                    <Button size="sm" variant="outline" onClick={() => handleAddProduct(line)}>
-                      <PlusCircle className="w-4 h-4 mr-2" /> Adicionar em {line}
-                    </Button>
-                  )}
-                </div>
-                {lineProducts.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {lineProducts.map((p) => (
-                      <ProductCard key={p.id} product={p} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-sm py-4 bg-muted/30 text-center rounded-lg border border-dashed">
-                    Nenhum produto cadastrado na {line}.
-                  </p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {groupProducts.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {productsToDisplay.map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
+      </div>
     </div>
   )
 }

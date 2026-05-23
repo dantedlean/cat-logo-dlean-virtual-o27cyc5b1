@@ -30,10 +30,10 @@ export function HeroCarousel() {
       link: 'Bancadas',
     },
     {
-      title: 'Carrinhos',
-      description: 'Carrinhos de transporte',
+      title: 'Carrinhos-Estantes',
+      description: 'Soluções logísticas e estantes',
       image: 'https://img.usecurling.com/p/1600/900?q=warehouse&color=gray',
-      link: 'Carrinhos',
+      link: 'Carrinhos-Estantes',
     },
   ]
 

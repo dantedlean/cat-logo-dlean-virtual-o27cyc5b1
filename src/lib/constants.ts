@@ -11,8 +11,7 @@ export interface Product {
 
 export const GROUPS = [
   { id: 'Bancadas', label: 'Bancadas', hasLines: true },
-  { id: 'Carrinhos', label: 'Carrinhos', hasLines: true },
-  { id: 'Estantes', label: 'Estantes', hasLines: true },
+  { id: 'Carrinhos-Estantes', label: 'Carrinhos-Estantes', hasLines: true },
   { id: 'Esteiras', label: 'Esteiras', hasLines: true },
   { id: 'Flow Racks', label: 'Flow Racks', hasLines: true },
   { id: 'Gestão Visual', label: 'Gestão Visual', hasLines: false },

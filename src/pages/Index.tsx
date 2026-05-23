@@ -1,31 +1,47 @@
-import { useMemo } from 'react'
-import { Search, ArrowLeft } from 'lucide-react'
+import { useState } from 'react'
+import { Search, ArrowLeft, ImagePlus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProductCard } from '@/components/ProductCard'
 import useCatalogStore from '@/stores/use-catalog-store'
+import { useCms } from '@/stores/use-cms-store'
 import { GROUPS } from '@/lib/constants'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { GroupProductsView } from '@/components/GroupProductsView'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 function HomeHeroView() {
-  const { products, setSelectedGroup, setSelectedLine } = useCatalogStore()
-
-  const groups = useMemo(() => {
-    const dynamicGroups = products.map((p) => p.group)
-    const allGroups = new Set([...GROUPS.map((g) => g.id), ...dynamicGroups])
-    return Array.from(allGroups).sort((a, b) => {
-      if (a === b) return 0
-      if (a === 'Outras Soluções') return 1
-      if (b === 'Outras Soluções') return -1
-      if (a === 'Sistemas') return 1
-      if (b === 'Sistemas') return -1
-      return a.localeCompare(b)
-    })
-  }, [products])
+  const { setSelectedGroup, setSelectedLine, editMode } = useCatalogStore()
+  const { content, setContent } = useCms()
+  const [uploadingGroup, setUploadingGroup] = useState<string | null>(null)
 
   const handleNav = (group: string) => {
     setSelectedGroup(group)
     setSelectedLine(null)
+  }
+
+  const handleImageUpload = async (groupId: string, file: File) => {
+    setUploadingGroup(groupId)
+    try {
+      const ext = file.name.split('.').pop()
+      const fileName = `family-${groupId}-${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('images').upload(fileName, file)
+      if (error) throw error
+      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
+      await setContent(`family_img_${groupId}`, data.publicUrl, 'image', {})
+      toast.success('Imagem atualizada com sucesso!')
+    } catch (err) {
+      toast.error('Erro ao fazer upload da imagem.')
+    } finally {
+      setUploadingGroup(null)
+    }
   }
 
   return (
@@ -40,32 +56,64 @@ function HomeHeroView() {
           Explorar Famílias
         </h2>
 
-        {groups.length === 0 ? (
-          <div className="text-center py-20 bg-muted/30 rounded-3xl border border-dashed text-muted-foreground">
-            Nenhum produto cadastrado no catálogo.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {groups.map((group, idx) => (
-              <div
-                key={group}
-                className="relative h-48 md:h-64 rounded-3xl overflow-hidden cursor-pointer group/card shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-muted flex items-center justify-center animate-fade-in-up"
-                style={{ animationDelay: `${idx * 50}ms` }}
-                onClick={() => handleNav(group)}
-              >
-                <img
-                  src={`https://img.usecurling.com/p/800/600?q=${encodeURIComponent(group)}&color=gray`}
-                  alt={group}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover/card:via-black/50 transition-colors z-0" />
-                <h3 className="text-white text-3xl md:text-4xl font-bold drop-shadow-xl z-10">
-                  {group}
-                </h3>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="relative group/carousel px-0 sm:px-10">
+          <Carousel opts={{ align: 'start', loop: false }} className="w-full">
+            <CarouselContent className="-ml-4">
+              {GROUPS.map((group, idx) => {
+                const familyImg =
+                  content[`family_img_${group.id}`]?.value ||
+                  `https://img.usecurling.com/p/800/600?q=${encodeURIComponent(group.id)}&color=gray`
+
+                return (
+                  <CarouselItem
+                    key={group.id}
+                    className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                  >
+                    <div
+                      className="relative h-64 rounded-3xl overflow-hidden cursor-pointer group/card shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-muted flex items-center justify-center animate-fade-in-up"
+                      style={{ animationDelay: `${idx * 50}ms` }}
+                      onClick={() => handleNav(group.id)}
+                    >
+                      <img
+                        src={familyImg}
+                        alt={group.label}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover/card:via-black/50 transition-colors z-0" />
+                      <h3 className="text-white text-2xl md:text-3xl font-bold drop-shadow-xl z-10 text-center px-4">
+                        {group.label}
+                      </h3>
+
+                      {editMode && (
+                        <label
+                          className="absolute top-4 right-4 bg-black/80 p-2 rounded-full cursor-pointer opacity-0 group-hover/card:opacity-100 transition-opacity z-20 hover:bg-black"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {uploadingGroup === group.id ? (
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          ) : (
+                            <ImagePlus className="w-5 h-5 text-white" />
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) handleImageUpload(group.id, file)
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </CarouselItem>
+                )
+              })}
+            </CarouselContent>
+            <CarouselPrevious className="hidden sm:flex -left-4 w-12 h-12" />
+            <CarouselNext className="hidden sm:flex -right-4 w-12 h-12" />
+          </Carousel>
+        </div>
       </section>
     </div>
   )

@@ -30,7 +30,7 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
   const [editMode, setEditMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
-  const [selectedLine, setSelectedLine] = useState<string | null>('Linha Leve')
+  const [selectedLine, setSelectedLine] = useState<string | null>(null)
 
   const setFilters = (group: string | null, line: string | null, search: string) => {
     setSelectedGroup(group || '')
