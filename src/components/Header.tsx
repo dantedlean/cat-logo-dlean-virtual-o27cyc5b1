@@ -54,7 +54,7 @@ export function Header() {
 
   const activeGroup = GROUPS.find((g) => g.id === selectedGroup)
   const logoUrl =
-    content['logo']?.value ||
+    content['company_logo']?.value ||
     'https://skip-prod-storage.s3.amazonaws.com/attachments/1740058564030_download.png'
 
   const handleActivateEdit = async () => {
@@ -106,10 +106,10 @@ export function Header() {
     try {
       const ext = file.name.split('.').pop()
       const fileName = `logo-${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('images').upload(fileName, file)
+      const { error } = await supabase.storage.from('assets').upload(fileName, file)
       if (error) throw error
-      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
-      await setContent('logo', data.publicUrl, 'logo', {})
+      const { data } = supabase.storage.from('assets').getPublicUrl(fileName)
+      await setContent('company_logo', data.publicUrl, 'logo', {})
       toast.success('Logo atualizado!')
     } catch (error) {
       toast.error('Erro ao atualizar logo')
