@@ -325,6 +325,4 @@ export function Header() {
           </Dialog>
         )}
       </div>
-    </header>
-  )
-}
+    
