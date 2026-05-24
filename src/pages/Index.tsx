@@ -52,8 +52,7 @@ function HomeHeroView() {
 
       <section className="animate-fade-in-up mt-10 container mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl md:text-4xl font-extrabold mb-8 text-foreground tracking-tight flex items-center gap-3">
-          <div className="w-2 h-8 bg-primary rounded-full hidden sm:block"></div>
-          Explorar Famílias
+          <span>Qua é o seu desafio?</span>
         </h2>
 
         <div className="relative group/carousel px-0 sm:px-10">
