@@ -23,6 +23,8 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 export function ProductCard({ product }: { product: Product }) {
   const { editMode, updateProduct, deleteProduct, addProduct } = useCatalogStore()
@@ -92,25 +94,54 @@ export function ProductCard({ product }: { product: Product }) {
         )}
 
         {editMode && (
-          <Button
-            className="absolute top-3 right-3 bg-orange-500 hover:bg-orange-600 text-white shadow-sm z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-            size="icon"
-            onClick={() => {
-              const urls = window.prompt(
-                'Novas URLs das Imagens (separadas por vírgula):',
-                (product.images || []).join(', '),
-              )
-              if (urls !== null) {
-                const arr = urls
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-                updateProduct(product.id, { images: arr })
-              }
-            }}
-          >
-            <ImageIcon className="w-4 h-4" />
-          </Button>
+          <div className="absolute top-3 right-3 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              className="bg-red-500 hover:bg-red-600 text-white shadow-sm h-8 w-8 p-0"
+              title="Remover todas as imagens"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (window.confirm('Tem certeza que deseja remover todas as imagens?')) {
+                  updateProduct(product.id, { images: [] })
+                }
+              }}
+            >
+              <Trash className="w-4 h-4" />
+            </Button>
+            <label
+              className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm flex items-center justify-center h-8 w-8 rounded-md cursor-pointer"
+              title="Adicionar imagem"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ImageIcon className="w-4 h-4" />
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={async (e) => {
+                  const files = e.target.files
+                  if (!files || files.length === 0) return
+                  const toastId = toast.loading('Enviando imagens...')
+                  try {
+                    const newUrls: string[] = []
+                    for (let i = 0; i < files.length; i++) {
+                      const file = files[i]
+                      const ext = file.name.split('.').pop()
+                      const fileName = `product-${product.id}-${Date.now()}-${i}.${ext}`
+                      const { error } = await supabase.storage.from('images').upload(fileName, file)
+                      if (error) throw error
+                      const { data } = supabase.storage.from('images').getPublicUrl(fileName)
+                      newUrls.push(data.publicUrl)
+                    }
+                    updateProduct(product.id, { images: [...(product.images || []), ...newUrls] })
+                    toast.success('Imagens enviadas com sucesso!', { id: toastId })
+                  } catch (err) {
+                    toast.error('Erro ao enviar imagens.', { id: toastId })
+                  }
+                }}
+              />
+            </label>
+          </div>
         )}
       </div>
 

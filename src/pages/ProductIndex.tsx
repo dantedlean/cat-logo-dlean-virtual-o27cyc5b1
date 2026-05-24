@@ -85,7 +85,7 @@ export default function ProductIndexPage() {
                       setSelectedGroup(p.group)
                       setSelectedLine(null)
                       setSearchQuery(p.code) // Quick jump to it via search
-                      navigate('/')
+                      navigate(`/family/${encodeURIComponent(p.group)}`)
                     }}
                   >
                     <TableCell className="font-mono font-medium text-primary">{p.code}</TableCell>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Search, PlusCircle, ImagePlus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProductCard } from '@/components/ProductCard'
@@ -21,6 +22,7 @@ export function GroupProductsView() {
   const { content, setContent } = useCms()
   const activeGroupInfo = GROUPS.find((g) => g.id === selectedGroup)
   const [uploadingLine, setUploadingLine] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const groupProducts = useMemo(
     () => products.filter((p) => p.group === selectedGroup),
@@ -42,7 +44,7 @@ export function GroupProductsView() {
       name: 'Novo Produto',
       group: selectedGroup || 'Bancadas',
       line: line,
-      images: ['https://img.usecurling.com/p/600/400?q=box&color=gray'],
+      images: [],
       specs: { Material: 'Definir', Dimensões: '0x0x0mm' },
       complementary: 'Informações adicionais do produto.',
     })
@@ -53,11 +55,11 @@ export function GroupProductsView() {
     setUploadingLine(line)
     try {
       const ext = file.name.split('.').pop()
-      const fileName = `line-${line.replace(/\s+/g, '').toLowerCase()}-${Date.now()}.${ext}`
+      const fileName = `line-${selectedGroup?.replace(/\s+/g, '').toLowerCase()}-${line.replace(/\s+/g, '').toLowerCase()}-${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('images').upload(fileName, file)
       if (error) throw error
       const { data } = supabase.storage.from('images').getPublicUrl(fileName)
-      await setContent(`line_img_${line}`, data.publicUrl, 'image', {})
+      await setContent(`line_img_${selectedGroup}_${line}`, data.publicUrl, 'image', {})
       toast.success('Imagem da linha atualizada!')
     } catch (err) {
       toast.error('Erro ao fazer upload da imagem.')
@@ -74,7 +76,10 @@ export function GroupProductsView() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setFilters(null, null, '')}
+            onClick={() => {
+              setFilters(null, null, '')
+              navigate('/')
+            }}
             className="rounded-full shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -86,21 +91,30 @@ export function GroupProductsView() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
           {LINES.map((line, idx) => {
-            const lineImg =
-              content[`line_img_${line}`]?.value ||
-              `https://img.usecurling.com/p/800/600?q=${encodeURIComponent(line)}&color=gray`
+            const lineImg = content[`line_img_${selectedGroup}_${line}`]?.value
             return (
               <div
                 key={line}
                 className="relative h-64 md:h-80 lg:h-96 rounded-3xl overflow-hidden cursor-pointer group/card shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-muted flex items-center justify-center animate-fade-in-up"
                 style={{ animationDelay: `${idx * 100}ms` }}
-                onClick={() => setSelectedLine(line)}
+                onClick={() => {
+                  setSelectedLine(line)
+                  navigate(
+                    `/family/${encodeURIComponent(selectedGroup || '')}/line/${encodeURIComponent(line)}`,
+                  )
+                }}
               >
-                <img
-                  src={lineImg}
-                  alt={line}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
-                />
+                {lineImg ? (
+                  <img
+                    src={lineImg}
+                    alt={line}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                  />
+                ) : (
+                  <div className="absolute inset-0 w-full h-full bg-slate-800 flex items-center justify-center transition-transform duration-700 group-hover/card:scale-105">
+                    <ImagePlus className="w-12 h-12 text-slate-600" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover/card:via-black/50 transition-colors z-0" />
                 <h3 className="text-white text-3xl md:text-4xl font-bold drop-shadow-xl z-10 text-center px-4">
                   {line}
@@ -144,9 +158,15 @@ export function GroupProductsView() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() =>
-            activeGroupInfo.hasLines ? setSelectedLine(null) : setFilters(null, null, '')
-          }
+          onClick={() => {
+            if (activeGroupInfo.hasLines) {
+              setSelectedLine(null)
+              navigate(`/family/${encodeURIComponent(selectedGroup || '')}`)
+            } else {
+              setFilters(null, null, '')
+              navigate('/')
+            }
+          }}
           className="rounded-full shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />

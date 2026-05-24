@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Search, ArrowLeft, ImagePlus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProductCard } from '@/components/ProductCard'
@@ -21,10 +22,12 @@ function HomeHeroView() {
   const { setSelectedGroup, setSelectedLine, editMode } = useCatalogStore()
   const { content, setContent } = useCms()
   const [uploadingGroup, setUploadingGroup] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const handleNav = (group: string) => {
     setSelectedGroup(group)
     setSelectedLine(null)
+    navigate(`/family/${encodeURIComponent(group)}`)
   }
 
   const handleImageUpload = async (groupId: string, file: File) => {
@@ -59,9 +62,7 @@ function HomeHeroView() {
           <Carousel opts={{ align: 'start', loop: false }} className="w-full">
             <CarouselContent className="-ml-4">
               {GROUPS.map((group, idx) => {
-                const familyImg =
-                  content[`family_img_${group.id}`]?.value ||
-                  `https://img.usecurling.com/p/800/600?q=${encodeURIComponent(group.id)}&color=gray`
+                const familyImg = content[`family_img_${group.id}`]?.value
 
                 return (
                   <CarouselItem
@@ -73,11 +74,17 @@ function HomeHeroView() {
                       style={{ animationDelay: `${idx * 50}ms` }}
                       onClick={() => handleNav(group.id)}
                     >
-                      <img
-                        src={familyImg}
-                        alt={group.label}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
-                      />
+                      {familyImg ? (
+                        <img
+                          src={familyImg}
+                          alt={group.label}
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 w-full h-full bg-slate-800 flex items-center justify-center transition-transform duration-700 group-hover/card:scale-105">
+                          <ImagePlus className="w-12 h-12 text-slate-600" />
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover/card:via-black/50 transition-colors z-0" />
                       <h3 className="text-white text-2xl md:text-3xl font-bold drop-shadow-xl z-10 text-center px-4">
                         {group.label}
@@ -171,7 +178,23 @@ function GlobalSearchResults() {
 }
 
 export default function CatalogPage() {
-  const { selectedGroup, searchQuery } = useCatalogStore()
+  const { selectedGroup, selectedLine, setSelectedGroup, setSelectedLine, searchQuery } =
+    useCatalogStore()
+  const { groupId, lineId } = useParams()
+
+  useEffect(() => {
+    if (groupId) {
+      if (groupId !== selectedGroup) setSelectedGroup(groupId)
+    } else {
+      if (selectedGroup) setSelectedGroup(null)
+    }
+
+    if (lineId) {
+      if (lineId !== selectedLine) setSelectedLine(lineId)
+    } else {
+      if (selectedLine) setSelectedLine(null)
+    }
+  }, [groupId, lineId])
 
   if (searchQuery) return <GlobalSearchResults />
   if (selectedGroup) return <GroupProductsView />

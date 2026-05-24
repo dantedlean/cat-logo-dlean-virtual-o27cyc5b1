@@ -1,11 +1,12 @@
+import { useNavigate } from 'react-router-dom'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import useCatalogStore from '@/stores/use-catalog-store'
-import { GROUPS, LINES } from '@/lib/constants'
+import { GROUPS } from '@/lib/constants'
 
 export function Navigation() {
-  const { selectedGroup, setSelectedGroup, selectedLine, setSelectedLine, searchQuery } =
-    useCatalogStore()
+  const { selectedGroup, setSelectedGroup, setSelectedLine, searchQuery } = useCatalogStore()
+  const navigate = useNavigate()
 
   if (searchQuery) return null // Hide navigation during global search
 
@@ -21,6 +22,7 @@ export function Navigation() {
               onClick={() => {
                 setSelectedGroup(g.id)
                 setSelectedLine(null)
+                navigate(`/family/${encodeURIComponent(g.id)}`)
               }}
               className={`rounded-full px-5 font-medium transition-colors ${selectedGroup === g.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >

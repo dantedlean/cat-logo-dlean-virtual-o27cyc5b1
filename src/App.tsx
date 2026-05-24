@@ -19,6 +19,8 @@ const App = () => (
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
+              <Route path="/family/:groupId" element={<Index />} />
+              <Route path="/family/:groupId/line/:lineId" element={<Index />} />
               <Route path="/index" element={<ProductIndexPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />

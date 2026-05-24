@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useCms } from '@/stores/use-cms-store'
 import useCatalogStore from '@/stores/use-catalog-store'
 import { Button } from '@/components/ui/button'
@@ -21,25 +22,14 @@ export function HeroCarousel() {
   const { editMode, setSelectedGroup, setSelectedLine } = useCatalogStore()
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
+  const navigate = useNavigate()
 
   const defaultSlides = [
     {
-      title: 'Bancadas',
-      description: 'Bancadas de alta performance',
-      image: 'https://img.usecurling.com/p/1600/900?q=industry&color=blue',
-      link: 'Bancadas',
-    },
-    {
-      title: 'Carrinhos',
-      description: 'Soluções logísticas para movimentação',
-      image: 'https://img.usecurling.com/p/1600/900?q=warehouse&color=gray',
-      link: 'Carrinhos',
-    },
-    {
-      title: 'Estantes',
-      description: 'Armazenamento eficiente e flexível',
-      image: 'https://img.usecurling.com/p/1600/900?q=shelves&color=orange',
-      link: 'Estantes',
+      title: 'Bem-vindo ao Catálogo',
+      description: 'Explore nossas soluções',
+      image: '',
+      link: '',
     },
   ]
 
@@ -79,15 +69,22 @@ export function HeroCarousel() {
               key={idx}
               className="h-full relative cursor-pointer flex-[0_0_100%] min-w-0"
               onClick={() => {
-                setSelectedGroup(slide.link)
-                setSelectedLine(null)
+                if (slide.link) {
+                  setSelectedGroup(slide.link)
+                  setSelectedLine(null)
+                  navigate(`/family/${encodeURIComponent(slide.link)}`)
+                }
               }}
             >
-              <img
-                src={slide.image}
-                alt={slide.title}
-                className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity duration-500"
-              />
+              {slide.image ? (
+                <img
+                  src={slide.image}
+                  alt={slide.title}
+                  className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity duration-500"
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-900 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity duration-500" />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-8 md:p-20 pb-16 md:pb-24">
                 <div className="max-w-[1600px] mx-auto w-full px-4 md:px-8">
                   <h2 className="text-white text-4xl md:text-6xl font-extrabold drop-shadow-2xl">

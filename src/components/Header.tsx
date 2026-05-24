@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Search,
   Settings,
@@ -99,6 +99,8 @@ export function Header() {
     input.click()
   }
 
+  const navigate = useNavigate()
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -144,6 +146,7 @@ export function Header() {
                   onClick={() => {
                     setSelectedGroup(null)
                     setSearchQuery('')
+                    navigate('/')
                   }}
                 >
                   Home
@@ -162,6 +165,7 @@ export function Header() {
                       setSelectedGroup(g.id)
                       setSelectedLine(null)
                       setSearchQuery('')
+                      navigate(`/family/${encodeURIComponent(g.id)}`)
                     }}
                   >
                     {g.label}
@@ -217,6 +221,7 @@ export function Header() {
             onClick={() => {
               setSelectedGroup(null)
               setSearchQuery('')
+              navigate('/')
             }}
           >
             Home
@@ -235,6 +240,7 @@ export function Header() {
                     setSelectedGroup(g.id)
                     setSelectedLine(null)
                     setSearchQuery('')
+                    navigate(`/family/${encodeURIComponent(g.id)}`)
                   }}
                   className="cursor-pointer"
                 >
