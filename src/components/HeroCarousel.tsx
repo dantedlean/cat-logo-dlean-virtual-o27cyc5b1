@@ -80,7 +80,7 @@ export function HeroCarousel() {
                 <img
                   src={slide.image}
                   alt={slide.title}
-                  className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity duration-500"
+                  className="w-full h-full object-contain bg-black opacity-90 hover:opacity-100 transition-opacity duration-500"
                 />
               ) : (
                 <div className="w-full h-full bg-slate-900 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity duration-500" />

@@ -34,7 +34,8 @@ function HomeHeroView() {
     setUploadingGroup(groupId)
     try {
       const ext = file.name.split('.').pop()
-      const fileName = `family-${groupId}-${Date.now()}.${ext}`
+      const safeGroupId = groupId.replace(/[^a-zA-Z0-9-]/g, '')
+      const fileName = `family-${safeGroupId}-${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('images').upload(fileName, file)
       if (error) throw error
       const { data } = supabase.storage.from('images').getPublicUrl(fileName)

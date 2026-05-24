@@ -50,7 +50,14 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
           code: d.code,
           name: d.name,
           group: d.product_group,
-          line: d.line,
+          line:
+            d.line === 'Média'
+              ? 'Linha Média'
+              : d.line === 'Leve'
+                ? 'Linha Leve'
+                : d.line === 'Pesada'
+                  ? 'Linha Pesada'
+                  : d.line,
           images: d.images as string[],
           specs: d.specs as Record<string, string>,
           complementary: d.complementary || undefined,
@@ -105,6 +112,11 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
       payload.product_group = data.group
       delete payload.group
     }
+    if (payload.line !== undefined) {
+      if (payload.line === 'Linha Média') payload.line = 'Média'
+      else if (payload.line === 'Linha Leve') payload.line = 'Leve'
+      else if (payload.line === 'Linha Pesada') payload.line = 'Pesada'
+    }
     const { error } = await supabase.from('products').update(payload).eq('id', id)
     if (error) {
       toast.error('Erro ao salvar produto')
@@ -132,6 +144,12 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
       product_group: group,
     }
 
+    if (payload.line !== undefined) {
+      if (payload.line === 'Linha Média') payload.line = 'Média'
+      else if (payload.line === 'Linha Leve') payload.line = 'Leve'
+      else if (payload.line === 'Linha Pesada') payload.line = 'Pesada'
+    }
+
     if (payload.id && (payload.id.startsWith('prod_') || payload.id.startsWith('temp_'))) {
       delete payload.id
     }
@@ -157,15 +175,22 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
   }
 
   const importBatch = async (batch: Partial<Product>[]) => {
-    const payloads = batch.map((p) => ({
-      code: p.code || `TMP-${Math.floor(Math.random() * 90000)}`,
-      name: p.name || 'Produto sem nome',
-      product_group: p.group || 'Carrinhos',
-      line: p.line || null,
-      images: p.images || [],
-      specs: p.specs || {},
-      complementary: p.complementary || '',
-    }))
+    const payloads = batch.map((p) => {
+      let dbLine = p.line || null
+      if (dbLine === 'Linha Média') dbLine = 'Média'
+      else if (dbLine === 'Linha Leve') dbLine = 'Leve'
+      else if (dbLine === 'Linha Pesada') dbLine = 'Pesada'
+
+      return {
+        code: p.code || `TMP-${Math.floor(Math.random() * 90000)}`,
+        name: p.name || 'Produto sem nome',
+        product_group: p.group || 'Carrinhos',
+        line: dbLine,
+        images: p.images || [],
+        specs: p.specs || {},
+        complementary: p.complementary || '',
+      }
+    })
 
     const { error } = await supabase.from('products').insert(payloads)
     if (!error) {

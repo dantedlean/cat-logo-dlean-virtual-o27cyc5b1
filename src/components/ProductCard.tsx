@@ -64,7 +64,7 @@ export function ProductCard({ product }: { product: Product }) {
           <Carousel className="w-full h-full">
             <CarouselContent>
               {product.images.map((img, idx) => (
-                <CarouselItem key={idx} className="h-full">
+                <CarouselItem key={idx} className="h-full relative group/item">
                   <div className="w-full h-full aspect-[4/3]">
                     <img
                       src={img}
@@ -72,6 +72,23 @@ export function ProductCard({ product }: { product: Product }) {
                       className="object-cover w-full h-full transition-transform duration-500 group-hover/image:scale-105"
                     />
                   </div>
+                  {editMode && (
+                    <Button
+                      variant="destructive"
+                      className="absolute top-3 left-3 w-8 h-8 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity z-20 shadow-sm"
+                      title="Remover esta imagem"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (window.confirm('Remover esta imagem específica?')) {
+                          const newImages = [...(product.images || [])]
+                          newImages.splice(idx, 1)
+                          updateProduct(product.id, { images: newImages })
+                        }
+                      }}
+                    >
+                      <Trash className="w-4 h-4" />
+                    </Button>
+                  )}
                 </CarouselItem>
               ))}
             </CarouselContent>
@@ -94,22 +111,10 @@ export function ProductCard({ product }: { product: Product }) {
         )}
 
         {editMode && (
-          <div className="absolute top-3 right-3 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              className="bg-red-500 hover:bg-red-600 text-white shadow-sm h-8 w-8 p-0"
-              title="Remover todas as imagens"
-              onClick={(e) => {
-                e.stopPropagation()
-                if (window.confirm('Tem certeza que deseja remover todas as imagens?')) {
-                  updateProduct(product.id, { images: [] })
-                }
-              }}
-            >
-              <Trash className="w-4 h-4" />
-            </Button>
+          <div className="absolute top-3 right-3 flex gap-2 z-20 opacity-0 group-hover/image:opacity-100 transition-opacity">
             <label
               className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm flex items-center justify-center h-8 w-8 rounded-md cursor-pointer"
-              title="Adicionar imagem"
+              title="Adicionar imagens"
               onClick={(e) => e.stopPropagation()}
             >
               <ImageIcon className="w-4 h-4" />
